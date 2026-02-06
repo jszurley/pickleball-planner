@@ -1,0 +1,25 @@
+.reservation-button-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.btn-reserved {
+  background-color: var(--primary);
+  color: white;
+  position: relative;
+}
+
+.btn-reserved:hover:not(:disabled) {
+  background-color: var(--error);
+}
+
+.btn-full {
+  background-color: var(--border);
+  color: var(--text-secondary);
+}
+
+.reservation-error {
+  font-size: 0.75rem;
+  color: var(--error);
+}

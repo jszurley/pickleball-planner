@@ -1,0 +1,150 @@
+.event-card {
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1.25rem;
+  transition: box-shadow 0.2s;
+  border-left: 4px solid var(--border);
+}
+
+.event-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.event-card.reserved {
+  border-left-color: var(--primary);
+  background: linear-gradient(to right, var(--primary-light), var(--surface) 20%);
+}
+
+.event-card.full {
+  border-left-color: var(--warning);
+}
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.event-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.event-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.event-datetime {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.event-date {
+  font-weight: 600;
+  color: var(--primary-dark);
+}
+
+.event-time {
+  color: var(--text-secondary);
+}
+
+.event-location {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.875rem;
+}
+
+.event-location span {
+  color: var(--text-secondary);
+}
+
+.event-spots {
+  margin-top: 0.5rem;
+}
+
+.spots-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.25rem;
+}
+
+.spots-filled {
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.3s;
+}
+
+.event-card.full .spots-filled {
+  background: var(--warning);
+}
+
+.spots-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.spots-text.full {
+  color: var(--warning);
+  font-weight: 500;
+}
+
+.event-creator {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.event-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.event-manage-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.event-attendees {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.attendees-toggle {
+  background: none;
+  border: none;
+  color: var(--secondary);
+  font-size: 0.875rem;
+  padding: 0;
+  cursor: pointer;
+}
+
+.attendees-toggle:hover {
+  text-decoration: underline;
+}
+
+.attendees-list {
+  margin-top: 0.5rem;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.attendees-list li {
+  margin-bottom: 0.25rem;
+}
