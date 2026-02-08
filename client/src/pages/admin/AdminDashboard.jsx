@@ -74,10 +74,10 @@ export default function AdminDashboard() {
           <div className="stat-label">Groups</div>
         </Link>
 
-        <div className="stat-card">
+        <Link to="/admin/events" className="stat-card">
           <div className="stat-value">{stats.upcomingEventCount}</div>
           <div className="stat-label">Upcoming Events</div>
-        </div>
+        </Link>
       </div>
 
       <div className="admin-nav">
@@ -96,6 +96,11 @@ export default function AdminDashboard() {
           <Link to="/admin/locations" className="admin-nav-card">
             <h3>Locations</h3>
             <p>Manage play locations</p>
+          </Link>
+
+          <Link to="/admin/events" className="admin-nav-card">
+            <h3>Events</h3>
+            <p>View and delete upcoming events</p>
           </Link>
         </div>
       </div>

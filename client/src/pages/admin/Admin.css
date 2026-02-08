@@ -222,6 +222,46 @@
   color: var(--primary);
 }
 
+/* Events table */
+.events-table-container {
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+}
+
+.events-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.events-table th,
+.events-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.events-table th {
+  background: var(--background);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.events-table tr:hover {
+  background: var(--background);
+}
+
+.events-table tr:last-child td {
+  border-bottom: none;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
 @media (max-width: 768px) {
   .pending-user-card {
     flex-direction: column;
@@ -230,5 +270,11 @@
 
   .pending-user-actions {
     justify-content: flex-end;
+  }
+
+  .events-table th,
+  .events-table td {
+    padding: 0.5rem;
+    font-size: 0.875rem;
   }
 }

@@ -15,6 +15,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import ManageUsers from './pages/admin/ManageUsers';
 import ManageGroups from './pages/admin/ManageGroups';
 import ManageLocations from './pages/admin/ManageLocations';
+import ManageEvents from './pages/admin/ManageEvents';
 
 function App() {
   const { user, loading } = useAuth();
@@ -129,6 +130,15 @@ function App() {
             element={
               <ProtectedRoute adminOnly>
                 <ManageLocations />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/events"
+            element={
+              <ProtectedRoute adminOnly>
+                <ManageEvents />
               </ProtectedRoute>
             }
           />
