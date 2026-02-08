@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getEvent, reserveSpot, cancelReservation, cloneEvent } from '../services/api';
 import './EventModal.css';
 
 export default function EventModal({ eventId, onClose, onReservationChange }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -128,8 +130,13 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
   const spotsLeft = event.max_spots - parseInt(event.reservation_count);
   const isCreator = event.creator_id === user?.id;
   const isAdmin = user?.role === 'admin';
+  const canEdit = isCreator || isAdmin;
   const canClone = isCreator || isAdmin;
   const past = isPastEvent();
+
+  const handleEdit = () => {
+    navigate(`/groups/${event.group_id}/events/${event.id}/edit`);
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -212,13 +219,21 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
 
         <div className="event-modal-footer">
           <div className="footer-actions">
+            {canEdit && !past && (
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={handleEdit}
+              >
+                Edit
+              </button>
+            )}
             {canClone && (
               <button
                 className="btn btn-outline btn-sm"
                 onClick={() => setShowCloneModal(true)}
                 disabled={actionLoading}
               >
-                Clone Event
+                Clone
               </button>
             )}
           </div>
