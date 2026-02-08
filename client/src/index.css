@@ -358,3 +358,158 @@ tr:hover {
     padding: 1rem;
   }
 }
+
+/* PWA / Mobile App Styles */
+html {
+  /* Prevent pull-to-refresh on mobile */
+  overscroll-behavior-y: contain;
+}
+
+body {
+  /* Prevent text selection on double-tap */
+  -webkit-user-select: none;
+  user-select: none;
+  /* Prevent tap highlight */
+  -webkit-tap-highlight-color: transparent;
+  /* Safe area for notched devices */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Allow text selection in inputs */
+input, textarea, select, [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Touch-friendly buttons */
+.btn {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+@media (max-width: 768px) {
+  .btn {
+    padding: 0.75rem 1.25rem;
+  }
+
+  .btn-sm {
+    min-height: 36px;
+    padding: 0.5rem 0.75rem;
+  }
+
+  /* Larger touch targets for form inputs */
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    min-height: 44px;
+    padding: 0.75rem;
+  }
+
+  /* Bottom safe area for fixed elements */
+  .fixed-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Smooth scrolling for iOS */
+.scroll-container {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent zoom on input focus (iOS) */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  input[type="time"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Pull to refresh indicator */
+.pull-indicator {
+  display: none;
+  justify-content: center;
+  padding: 1rem;
+  color: var(--text-secondary);
+}
+
+/* Offline indicator */
+.offline-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--warning);
+  color: white;
+  text-align: center;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  z-index: 9999;
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+}
+
+/* Install prompt */
+.install-prompt {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  right: 1rem;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 1rem;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+.install-prompt-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+}
+
+.install-prompt-content {
+  flex: 1;
+}
+
+.install-prompt-title {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.install-prompt-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.install-prompt-actions {
+  display: flex;
+  gap: 0.5rem;
+}

@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
+import InstallPrompt from './components/InstallPrompt';
+import OfflineIndicator from './components/OfflineIndicator';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -25,6 +27,8 @@ function App() {
       {user && <Navbar />}
 
       <main className="container">
+        <OfflineIndicator />
+        <InstallPrompt />
         <Routes>
           {/* Public routes */}
           <Route
