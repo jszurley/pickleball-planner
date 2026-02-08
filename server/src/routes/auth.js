@@ -5,6 +5,26 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
+// Password validation helper
+function validatePassword(password) {
+  const errors = [];
+
+  if (password.length < 8) {
+    errors.push('at least 8 characters');
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push('one uppercase letter');
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push('one lowercase letter');
+  }
+  if (!/[0-9]/.test(password)) {
+    errors.push('one number');
+  }
+
+  return errors;
+}
+
 // Register - creates pending user
 router.post('/register', async (req, res) => {
   try {
@@ -14,12 +34,32 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Email, password, and name are required' });
     }
 
-    const existingUser = await User.findByEmail(email);
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // Validate password strength
+    const passwordErrors = validatePassword(password);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({
+        error: `Password must contain ${passwordErrors.join(', ')}`
+      });
+    }
+
+    // Sanitize name (remove potential XSS)
+    const sanitizedName = name.replace(/[<>]/g, '').trim();
+    if (sanitizedName.length < 2) {
+      return res.status(400).json({ error: 'Name must be at least 2 characters' });
+    }
+
+    const existingUser = await User.findByEmail(email.toLowerCase());
     if (existingUser) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    const user = await User.create(email, password, name);
+    const user = await User.create(email.toLowerCase(), password, sanitizedName);
 
     res.status(201).json({
       message: 'Registration submitted. Please wait for admin approval.',
@@ -81,12 +121,20 @@ router.post('/login', async (req, res) => {
 });
 
 // Reset password (requires setup key for security)
+// Can be disabled via DISABLE_SETUP_ENDPOINTS=true environment variable
 router.post('/reset-password', async (req, res) => {
   try {
+    // Check if setup endpoints are disabled
+    if (process.env.DISABLE_SETUP_ENDPOINTS === 'true') {
+      console.warn('Blocked reset-password attempt - setup endpoints disabled');
+      return res.status(403).json({ error: 'This endpoint has been disabled' });
+    }
+
     const { email, newPassword, setupKey } = req.body;
 
     // Require setup key for security
-    if (setupKey !== process.env.JWT_SECRET) {
+    if (!setupKey || setupKey !== process.env.JWT_SECRET) {
+      console.warn(`Failed reset-password attempt for email: ${email}`);
       return res.status(403).json({ error: 'Invalid setup key' });
     }
 
@@ -94,7 +142,15 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ error: 'Email and new password required' });
     }
 
-    const user = await User.findByEmail(email);
+    // Validate password strength
+    const passwordErrors = validatePassword(newPassword);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({
+        error: `Password must contain ${passwordErrors.join(', ')}`
+      });
+    }
+
+    const user = await User.findByEmail(email.toLowerCase());
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -103,8 +159,9 @@ router.post('/reset-password', async (req, res) => {
     const bcrypt = require('bcrypt');
     const passwordHash = await bcrypt.hash(newPassword, 10);
     const pool = require('../config/db');
-    await pool.query("UPDATE users SET password_hash = $1 WHERE email = $2", [passwordHash, email]);
+    await pool.query("UPDATE users SET password_hash = $1 WHERE email = $2", [passwordHash, email.toLowerCase()]);
 
+    console.log(`Password reset successful for: ${email}`);
     res.json({ message: 'Password reset successful. Please log in.' });
   } catch (error) {
     console.error('Reset password error:', error);
@@ -113,12 +170,20 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // One-time setup: Promote first user to admin (only works if no admins exist)
+// Can be disabled via DISABLE_SETUP_ENDPOINTS=true environment variable
 router.post('/setup-admin', async (req, res) => {
   try {
+    // Check if setup endpoints are disabled
+    if (process.env.DISABLE_SETUP_ENDPOINTS === 'true') {
+      console.warn('Blocked setup-admin attempt - setup endpoints disabled');
+      return res.status(403).json({ error: 'This endpoint has been disabled' });
+    }
+
     const { email, setupKey } = req.body;
 
     // Require setup key for security
-    if (setupKey !== process.env.JWT_SECRET) {
+    if (!setupKey || setupKey !== process.env.JWT_SECRET) {
+      console.warn(`Failed setup-admin attempt for email: ${email}`);
       return res.status(403).json({ error: 'Invalid setup key' });
     }
 
@@ -130,8 +195,9 @@ router.post('/setup-admin', async (req, res) => {
     }
 
     // Promote the user
-    await pool.query("UPDATE users SET role = 'admin' WHERE email = $1", [email]);
+    await pool.query("UPDATE users SET role = 'admin' WHERE email = $1", [email.toLowerCase()]);
 
+    console.log(`Admin setup complete for: ${email}`);
     res.json({ message: 'Admin setup complete. Please log in again.' });
   } catch (error) {
     console.error('Setup admin error:', error);
@@ -227,8 +293,12 @@ router.put('/profile/password', auth, async (req, res) => {
       return res.status(400).json({ error: 'Current password and new password are required' });
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    // Validate password strength
+    const passwordErrors = validatePassword(newPassword);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({
+        error: `Password must contain ${passwordErrors.join(', ')}`
+      });
     }
 
     // Verify current password
@@ -240,6 +310,7 @@ router.put('/profile/password', auth, async (req, res) => {
 
     await User.updatePassword(req.user.id, newPassword);
 
+    console.log(`Password changed for user: ${req.user.id}`);
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
     console.error('Change password error:', error);

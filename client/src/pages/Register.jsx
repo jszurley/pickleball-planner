@@ -12,6 +12,18 @@ export default function Register() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const validatePassword = (pwd) => {
+    const errors = [];
+    if (pwd.length < 8) errors.push('8+ characters');
+    if (!/[A-Z]/.test(pwd)) errors.push('uppercase letter');
+    if (!/[a-z]/.test(pwd)) errors.push('lowercase letter');
+    if (!/[0-9]/.test(pwd)) errors.push('number');
+    return errors;
+  };
+
+  const passwordErrors = validatePassword(password);
+  const isPasswordValid = passwordErrors.length === 0;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -21,8 +33,8 @@ export default function Register() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (!isPasswordValid) {
+      setError('Password does not meet requirements');
       return;
     }
 
@@ -104,8 +116,15 @@ export default function Register() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="new-password"
-              minLength={6}
+              minLength={8}
             />
+            {password && (
+              <div className={`password-requirements ${isPasswordValid ? 'valid' : ''}`}>
+                <small>
+                  Password must have: {passwordErrors.length === 0 ? 'All requirements met!' : passwordErrors.join(', ')}
+                </small>
+              </div>
+            )}
           </div>
 
           <div className="form-group">

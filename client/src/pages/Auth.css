@@ -57,3 +57,20 @@
 .btn-block {
   width: 100%;
 }
+
+.password-requirements {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: var(--error-light);
+  border-radius: 4px;
+  color: var(--error);
+}
+
+.password-requirements.valid {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.password-requirements small {
+  font-size: 0.8rem;
+}
