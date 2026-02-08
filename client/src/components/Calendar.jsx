@@ -99,7 +99,9 @@ export default function Calendar({ events, onEventClick, onDateClick }) {
                 <span className="event-time">
                   {formatTime(event.start_time)}
                 </span>
-                <span className="event-title">{event.title}</span>
+                <span className="event-title">
+                  {event.title.length > 8 ? event.title.substring(0, 8) + '...' : event.title}
+                </span>
               </div>
             ))}
             {dayEvents.length > 3 && (

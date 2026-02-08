@@ -45,7 +45,7 @@ app.use(cors({
 // Security: Rate limiting - general API limit
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
+  max: 1000, // 1000 requests per window
   message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false
@@ -54,7 +54,7 @@ const generalLimiter = rateLimit({
 // Security: Stricter rate limit for auth endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts per window
+  max: 30, // 30 attempts per window
   message: { error: 'Too many login attempts, please try again in 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false
