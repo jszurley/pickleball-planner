@@ -64,6 +64,46 @@
   margin-top: 0.5rem;
 }
 
+.days-of-week {
+  padding: 1rem;
+  background: var(--primary-light);
+  border-radius: 8px;
+}
+
+.days-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.day-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+
+.day-checkbox:hover {
+  border-color: var(--primary);
+}
+
+.day-checkbox.selected {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.day-checkbox input {
+  display: none;
+}
+
 @media (max-width: 480px) {
   .form-row {
     grid-template-columns: 1fr;

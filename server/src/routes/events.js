@@ -235,7 +235,7 @@ router.post('/events/:id/clone', auth, async (req, res) => {
 router.post('/groups/:groupId/events/recurring', auth, async (req, res) => {
   try {
     const { groupId } = req.params;
-    const { title, startDate, endDate, startTime, endTime, locationId, maxSpots, frequency } = req.body;
+    const { title, startDate, endDate, startTime, endTime, locationId, maxSpots, frequency, daysOfWeek } = req.body;
 
     // Check if user has access to this group
     if (req.user.role !== 'admin') {
@@ -256,6 +256,16 @@ router.post('/groups/:groupId/events/recurring', auth, async (req, res) => {
       return res.status(400).json({ error: 'Invalid frequency. Use: daily, weekly, biweekly, or monthly' });
     }
 
+    // Validate daysOfWeek for daily/weekly
+    if ((frequency === 'daily' || frequency === 'weekly') && daysOfWeek) {
+      if (!Array.isArray(daysOfWeek) || daysOfWeek.length === 0) {
+        return res.status(400).json({ error: 'At least one day of the week must be selected' });
+      }
+      if (daysOfWeek.some(d => d < 0 || d > 6)) {
+        return res.status(400).json({ error: 'Invalid day of week. Use 0 (Sun) to 6 (Sat)' });
+      }
+    }
+
     // Limit to prevent creating too many events
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -274,7 +284,8 @@ router.post('/groups/:groupId/events/recurring', auth, async (req, res) => {
       startTime,
       endTime,
       maxSpots,
-      frequency
+      frequency,
+      daysOfWeek
     );
 
     res.status(201).json({ message: `Created ${events.length} events`, count: events.length, events });

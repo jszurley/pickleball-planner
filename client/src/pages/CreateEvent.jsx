@@ -31,6 +31,9 @@ export default function CreateEvent() {
     endDate: '',
     frequency: 'weekly'
   });
+  const [daysOfWeek, setDaysOfWeek] = useState([1, 2, 3, 4, 5]); // Default Mon-Fri for daily
+
+  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   useEffect(() => {
     loadData();
@@ -96,6 +99,21 @@ export default function CreateEvent() {
   const handleRecurringChange = (e) => {
     const { name, value } = e.target;
     setRecurringData((prev) => ({ ...prev, [name]: value }));
+
+    // Reset days of week when frequency changes
+    if (name === 'frequency') {
+      if (value === 'daily') {
+        setDaysOfWeek([1, 2, 3, 4, 5]); // Mon-Fri
+      } else if (value === 'weekly') {
+        setDaysOfWeek([]); // None selected
+      }
+    }
+  };
+
+  const toggleDay = (day) => {
+    setDaysOfWeek((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()
+    );
   };
 
   const handleSubmit = async (e) => {
@@ -118,6 +136,13 @@ export default function CreateEvent() {
         await updateEvent(eventId, payload);
         navigate(`/groups/${targetGroupId}/events`);
       } else if (isRecurring) {
+        // Validate days of week for daily/weekly
+        if ((recurringData.frequency === 'daily' || recurringData.frequency === 'weekly') && daysOfWeek.length === 0) {
+          setError('Please select at least one day of the week');
+          setSubmitting(false);
+          return;
+        }
+
         const payload = {
           title: formData.title,
           startDate: formData.eventDate,
@@ -126,7 +151,8 @@ export default function CreateEvent() {
           endTime: formData.endTime,
           locationId: formData.locationId || null,
           maxSpots: parseInt(formData.maxSpots),
-          frequency: recurringData.frequency
+          frequency: recurringData.frequency,
+          daysOfWeek: (recurringData.frequency === 'daily' || recurringData.frequency === 'weekly') ? daysOfWeek : null
         };
         const response = await createRecurringEvents(targetGroupId, payload);
         alert(`Created ${response.data.count} events!`);
@@ -284,6 +310,24 @@ export default function CreateEvent() {
                   <option value="biweekly">Every 2 Weeks</option>
                   <option value="monthly">Monthly</option>
                 </select>
+              </div>
+            </div>
+          )}
+
+          {isRecurring && (recurringData.frequency === 'daily' || recurringData.frequency === 'weekly') && (
+            <div className="form-group days-of-week">
+              <label>Days of Week</label>
+              <div className="days-checkboxes">
+                {dayLabels.map((label, index) => (
+                  <label key={index} className={`day-checkbox ${daysOfWeek.includes(index) ? 'selected' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={daysOfWeek.includes(index)}
+                      onChange={() => toggleDay(index)}
+                    />
+                    <span>{label}</span>
+                  </label>
+                ))}
               </div>
             </div>
           )}

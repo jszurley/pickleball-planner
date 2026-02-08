@@ -150,12 +150,36 @@ const Event = {
   },
 
   // Create recurring events
-  async createRecurring(groupId, creatorId, locationId, title, startDate, endDate, startTime, endTime, maxSpots, frequency) {
+  async createRecurring(groupId, creatorId, locationId, title, startDate, endDate, startTime, endTime, maxSpots, frequency, daysOfWeek = null) {
     const events = [];
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    // Calculate interval in days based on frequency
+    // For daily and weekly with daysOfWeek, iterate day by day and check if day matches
+    if ((frequency === 'daily' || frequency === 'weekly') && daysOfWeek && daysOfWeek.length > 0) {
+      let currentDate = new Date(start);
+      while (currentDate <= end) {
+        const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 6 = Saturday
+        if (daysOfWeek.includes(dayOfWeek)) {
+          const dateStr = currentDate.toISOString().split('T')[0];
+          const event = await this.create(
+            groupId,
+            creatorId,
+            locationId,
+            title,
+            dateStr,
+            startTime,
+            endTime,
+            maxSpots
+          );
+          events.push(event);
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      return events;
+    }
+
+    // Original logic for biweekly/monthly or when no daysOfWeek specified
     let intervalDays;
     switch (frequency) {
       case 'daily':
