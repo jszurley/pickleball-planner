@@ -33,10 +33,12 @@ export default function Calendar({ events, onEventClick, onDateClick }) {
 
   const getEventsForDate = (date) => {
     const dateStr = formatDateForComparison(date);
-    return events.filter((event) => {
-      const eventDate = event.event_date.split('T')[0];
-      return eventDate === dateStr;
-    });
+    return events
+      .filter((event) => {
+        const eventDate = event.event_date.split('T')[0];
+        return eventDate === dateStr;
+      })
+      .sort((a, b) => a.start_time.localeCompare(b.start_time));
   };
 
   const formatDateForComparison = (date) => {
