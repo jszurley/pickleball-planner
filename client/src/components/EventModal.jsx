@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getEvent, reserveSpot, cancelReservation, cloneEvent } from '../services/api';
+import { getEvent, reserveSpot, cancelReservation, cloneEvent, deleteEvent } from '../services/api';
 import './EventModal.css';
 
 export default function EventModal({ eventId, onClose, onReservationChange }) {
@@ -14,6 +14,7 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
   const [showCloneModal, setShowCloneModal] = useState(false);
   const [cloneDate, setCloneDate] = useState('');
   const [cloneSuccess, setCloneSuccess] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     loadEvent();
@@ -74,6 +75,21 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
       if (onReservationChange) onReservationChange();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to clone event');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setActionLoading(true);
+    setError('');
+    try {
+      await deleteEvent(eventId);
+      setShowDeleteConfirm(false);
+      onClose();
+      if (onReservationChange) onReservationChange();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to delete event');
     } finally {
       setActionLoading(false);
     }
@@ -236,6 +252,15 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
                 Clone
               </button>
             )}
+            {canEdit && (
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={actionLoading}
+              >
+                Delete
+              </button>
+            )}
           </div>
           <div className="footer-primary">
             {past ? (
@@ -291,6 +316,34 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
                 disabled={actionLoading || !cloneDate}
               >
                 {actionLoading ? 'Cloning...' : 'Clone Event'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showDeleteConfirm && (
+          <div className="clone-modal delete-confirm-modal">
+            <h3>Delete Event</h3>
+            <p>Are you sure you want to delete this event? This action cannot be undone.</p>
+            {parseInt(event.reservation_count) > 0 && (
+              <p className="delete-warning">
+                <strong>Warning:</strong> This event has {event.reservation_count} reservation(s).
+                All reservations will be cancelled.
+              </p>
+            )}
+            <div className="clone-modal-actions">
+              <button
+                className="btn btn-outline"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={handleDelete}
+                disabled={actionLoading}
+              >
+                {actionLoading ? 'Deleting...' : 'Delete Event'}
               </button>
             </div>
           </div>
