@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const pool = require('./config/db');
 
 const authRoutes = require('./routes/auth');
@@ -15,6 +16,10 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from client build in production
+const clientBuildPath = path.join(__dirname, '../../client/dist');
+app.use(express.static(clientBuildPath));
 
 // Health check (before other routes to avoid conflict with /:id patterns)
 app.get('/api/health', (req, res) => {
@@ -33,6 +38,11 @@ app.use('/api', reservationsRoutes);
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
+});
+
+// Serve React app for all non-API routes (must be after API routes)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 
 const PORT = process.env.PORT || 3001;
