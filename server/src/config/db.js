@@ -34,11 +34,17 @@ if (USE_SQLITE) {
           email TEXT UNIQUE NOT NULL,
           password_hash TEXT NOT NULL,
           name TEXT NOT NULL,
+          phone TEXT,
           role TEXT NOT NULL DEFAULT 'pending' CHECK (role IN ('pending', 'member', 'admin')),
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
+
+      // Add phone column if it doesn't exist (migration for existing databases)
+      await pool.query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT
+      `).catch(() => {});
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS groups (

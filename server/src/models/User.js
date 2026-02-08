@@ -26,10 +26,30 @@ const User = {
 
   async findById(id) {
     const result = await pool.query(
-      'SELECT id, email, name, role, created_at, updated_at FROM users WHERE id = $1',
+      'SELECT id, email, name, phone, role, created_at, updated_at FROM users WHERE id = $1',
       [id]
     );
     return result.rows[0];
+  },
+
+  async updateProfile(id, { name, email, phone }) {
+    const result = await pool.query(
+      `UPDATE users
+       SET name = $1, email = $2, phone = $3, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4
+       RETURNING id, email, name, phone, role, created_at, updated_at`,
+      [name, email, phone || null, id]
+    );
+    return result.rows[0];
+  },
+
+  async updatePassword(id, newPassword) {
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(newPassword, saltRounds);
+    await pool.query(
+      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [passwordHash, id]
+    );
   },
 
   async findAll() {

@@ -95,9 +95,15 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
-      <div className="page-header">
-        <h1>Welcome, {user?.name}!</h1>
-        <p>Manage your pickleball games and reservations</p>
+      <div className="dashboard-header">
+        <div className="page-header">
+          <h1>Welcome, {user?.name}!</h1>
+          <p>Manage your pickleball games and reservations</p>
+        </div>
+        <Link to="/profile" className="profile-button">
+          <span className="profile-avatar-small">{user?.name?.charAt(0).toUpperCase()}</span>
+          <span className="profile-text">Profile</span>
+        </Link>
       </div>
 
       {/* Install App Banner */}

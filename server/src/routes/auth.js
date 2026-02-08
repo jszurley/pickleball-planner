@@ -142,20 +142,108 @@ router.post('/setup-admin', async (req, res) => {
 // Get current user info with groups
 router.get('/me', auth, async (req, res) => {
   try {
+    const user = await User.findById(req.user.id);
     const groups = await User.getGroups(req.user.id);
 
     res.json({
       user: {
-        id: req.user.id,
-        email: req.user.email,
-        name: req.user.name,
-        role: req.user.role
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone || '',
+        role: user.role
       },
       groups
     });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to get user info' });
+  }
+});
+
+// Get user profile
+router.get('/profile', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone || '',
+      role: user.role,
+      created_at: user.created_at
+    });
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ error: 'Failed to get profile' });
+  }
+});
+
+// Update user profile
+router.put('/profile', auth, async (req, res) => {
+  try {
+    const { name, email, phone } = req.body;
+
+    if (!name || !email) {
+      return res.status(400).json({ error: 'Name and email are required' });
+    }
+
+    // Check if email is taken by another user
+    if (email !== req.user.email) {
+      const existingUser = await User.findByEmail(email);
+      if (existingUser && existingUser.id !== req.user.id) {
+        return res.status(400).json({ error: 'Email is already in use' });
+      }
+    }
+
+    const updatedUser = await User.updateProfile(req.user.id, { name, email, phone });
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        phone: updatedUser.phone || '',
+        role: updatedUser.role
+      }
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// Change password
+router.put('/profile/password', auth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    // Verify current password
+    const user = await User.findByEmail(req.user.email);
+    const isValid = await User.comparePassword(currentPassword, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    await User.updatePassword(req.user.id, newPassword);
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
   }
 });
 

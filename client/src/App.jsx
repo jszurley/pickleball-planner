@@ -7,6 +7,7 @@ import OfflineIndicator from './components/OfflineIndicator';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
 import CalendarView from './pages/CalendarView';
 import GroupEvents from './pages/GroupEvents';
 import CreateEvent from './pages/CreateEvent';
@@ -46,6 +47,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             }
           />

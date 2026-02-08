@@ -46,11 +46,19 @@ function initSchema() {
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       name TEXT NOT NULL,
+      phone TEXT,
       role TEXT NOT NULL DEFAULT 'pending' CHECK (role IN ('pending', 'member', 'admin')),
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     )
   `);
+
+  // Add phone column if it doesn't exist (migration for existing databases)
+  try {
+    db.run('ALTER TABLE users ADD COLUMN phone TEXT');
+  } catch (e) {
+    // Column may already exist
+  }
 
   db.run(`
     CREATE TABLE IF NOT EXISTS groups (

@@ -34,6 +34,11 @@ export const register = (data) => api.post('/auth/register', data);
 export const login = (data) => api.post('/auth/login', data);
 export const getMe = () => api.get('/auth/me');
 
+// Profile
+export const getProfile = () => api.get('/auth/profile');
+export const updateProfile = (data) => api.put('/auth/profile', data);
+export const changePassword = (data) => api.put('/auth/profile/password', data);
+
 // Users (Admin)
 export const getPendingUsers = () => api.get('/users/pending');
 export const approveUser = (id, groupIds) => api.post(`/users/${id}/approve`, { groupIds });
