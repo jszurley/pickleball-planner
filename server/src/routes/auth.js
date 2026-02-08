@@ -80,6 +80,33 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// One-time setup: Promote first user to admin (only works if no admins exist)
+router.post('/setup-admin', async (req, res) => {
+  try {
+    const { email, setupKey } = req.body;
+
+    // Require setup key for security
+    if (setupKey !== process.env.JWT_SECRET) {
+      return res.status(403).json({ error: 'Invalid setup key' });
+    }
+
+    // Check if any admin already exists
+    const pool = require('../config/db');
+    const admins = await pool.query("SELECT id FROM users WHERE role = 'admin'");
+    if (admins.rows.length > 0) {
+      return res.status(400).json({ error: 'Admin already exists. Setup disabled.' });
+    }
+
+    // Promote the user
+    await pool.query("UPDATE users SET role = 'admin' WHERE email = $1", [email]);
+
+    res.json({ message: 'Admin setup complete. Please log in again.' });
+  } catch (error) {
+    console.error('Setup admin error:', error);
+    res.status(500).json({ error: 'Setup failed' });
+  }
+});
+
 // Get current user info with groups
 router.get('/me', auth, async (req, res) => {
   try {
