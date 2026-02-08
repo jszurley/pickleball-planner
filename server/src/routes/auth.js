@@ -80,6 +80,38 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Reset password (requires setup key for security)
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, newPassword, setupKey } = req.body;
+
+    // Require setup key for security
+    if (setupKey !== process.env.JWT_SECRET) {
+      return res.status(403).json({ error: 'Invalid setup key' });
+    }
+
+    if (!email || !newPassword) {
+      return res.status(400).json({ error: 'Email and new password required' });
+    }
+
+    const user = await User.findByEmail(email);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Hash new password and update
+    const bcrypt = require('bcrypt');
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const pool = require('../config/db');
+    await pool.query("UPDATE users SET password_hash = $1 WHERE email = $2", [passwordHash, email]);
+
+    res.json({ message: 'Password reset successful. Please log in.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Password reset failed' });
+  }
+});
+
 // One-time setup: Promote first user to admin (only works if no admins exist)
 router.post('/setup-admin', async (req, res) => {
   try {
