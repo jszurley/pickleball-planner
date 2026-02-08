@@ -198,6 +198,92 @@ router.put('/events/:id', auth, async (req, res) => {
   }
 });
 
+// Clone an event to a new date
+router.post('/events/:id/clone', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newDate } = req.body;
+
+    const event = await Event.findById(id);
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Check access (creator, admin, or group member)
+    if (req.user.role !== 'admin') {
+      const isInGroup = await User.isInGroup(req.user.id, event.group_id);
+      if (!isInGroup) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
+
+    if (!newDate) {
+      return res.status(400).json({ error: 'New date is required' });
+    }
+
+    const clonedEvent = await Event.clone(id, newDate, req.user.id);
+    const fullEvent = await Event.findById(clonedEvent.id);
+
+    res.status(201).json(fullEvent);
+  } catch (error) {
+    console.error('Clone event error:', error);
+    res.status(500).json({ error: 'Failed to clone event' });
+  }
+});
+
+// Create recurring events
+router.post('/groups/:groupId/events/recurring', auth, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { title, startDate, endDate, startTime, endTime, locationId, maxSpots, frequency } = req.body;
+
+    // Check if user has access to this group
+    if (req.user.role !== 'admin') {
+      const isInGroup = await User.isInGroup(req.user.id, groupId);
+      if (!isInGroup) {
+        return res.status(403).json({ error: 'Access denied to this group' });
+      }
+    }
+
+    if (!title || !startDate || !endDate || !startTime || !endTime || !maxSpots || !frequency) {
+      return res.status(400).json({
+        error: 'Title, start date, end date, start time, end time, max spots, and frequency are required'
+      });
+    }
+
+    const validFrequencies = ['daily', 'weekly', 'biweekly', 'monthly'];
+    if (!validFrequencies.includes(frequency)) {
+      return res.status(400).json({ error: 'Invalid frequency. Use: daily, weekly, biweekly, or monthly' });
+    }
+
+    // Limit to prevent creating too many events
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const daysDiff = (end - start) / (1000 * 60 * 60 * 24);
+    if (daysDiff > 365) {
+      return res.status(400).json({ error: 'Date range cannot exceed 1 year' });
+    }
+
+    const events = await Event.createRecurring(
+      groupId,
+      req.user.id,
+      locationId || null,
+      title,
+      startDate,
+      endDate,
+      startTime,
+      endTime,
+      maxSpots,
+      frequency
+    );
+
+    res.status(201).json({ message: `Created ${events.length} events`, count: events.length, events });
+  } catch (error) {
+    console.error('Create recurring events error:', error);
+    res.status(500).json({ error: 'Failed to create recurring events' });
+  }
+});
+
 // Delete event (creator or admin)
 router.delete('/events/:id', auth, async (req, res) => {
   try {

@@ -112,13 +112,23 @@
 
 .event-modal-footer {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: center;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
   margin-top: 1rem;
 }
 
-.event-modal-footer .btn {
+.footer-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.footer-primary {
+  display: flex;
+}
+
+.footer-primary .btn {
   min-width: 200px;
 }
 
@@ -147,8 +157,62 @@
   font-style: italic;
 }
 
+.clone-modal {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  padding: 1.5rem;
+  border-top: 2px solid var(--primary);
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.clone-modal h3 {
+  margin-bottom: 0.5rem;
+}
+
+.clone-modal p {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.clone-modal .form-group {
+  margin-bottom: 1rem;
+}
+
+.clone-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.alert-success {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
 @media (max-width: 480px) {
-  .event-modal-footer .btn {
+  .event-modal-footer {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .footer-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .footer-primary {
+    width: 100%;
+  }
+
+  .footer-primary .btn {
     width: 100%;
   }
 }

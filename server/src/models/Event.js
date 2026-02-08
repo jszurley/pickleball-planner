@@ -130,6 +130,74 @@ const Event = {
        ORDER BY e.event_date DESC, e.start_time DESC`
     );
     return result.rows;
+  },
+
+  // Clone an event to a specific date
+  async clone(eventId, newDate, creatorId) {
+    const original = await this.findById(eventId);
+    if (!original) return null;
+
+    return this.create(
+      original.group_id,
+      creatorId,
+      original.location_id,
+      original.title,
+      newDate,
+      original.start_time,
+      original.end_time,
+      original.max_spots
+    );
+  },
+
+  // Create recurring events
+  async createRecurring(groupId, creatorId, locationId, title, startDate, endDate, startTime, endTime, maxSpots, frequency) {
+    const events = [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Calculate interval in days based on frequency
+    let intervalDays;
+    switch (frequency) {
+      case 'daily':
+        intervalDays = 1;
+        break;
+      case 'weekly':
+        intervalDays = 7;
+        break;
+      case 'biweekly':
+        intervalDays = 14;
+        break;
+      case 'monthly':
+        intervalDays = 30; // Approximate
+        break;
+      default:
+        intervalDays = 7;
+    }
+
+    let currentDate = new Date(start);
+    while (currentDate <= end) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const event = await this.create(
+        groupId,
+        creatorId,
+        locationId,
+        title,
+        dateStr,
+        startTime,
+        endTime,
+        maxSpots
+      );
+      events.push(event);
+
+      // Move to next occurrence
+      if (frequency === 'monthly') {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      } else {
+        currentDate.setDate(currentDate.getDate() + intervalDays);
+      }
+    }
+
+    return events;
   }
 };
 

@@ -60,9 +60,11 @@ export const deleteLocation = (id) => api.delete(`/locations/${id}`);
 export const getGroupEvents = (groupId, includePast = false) =>
   api.get(`/groups/${groupId}/events`, { params: { includePast } });
 export const createEvent = (groupId, data) => api.post(`/groups/${groupId}/events`, data);
+export const createRecurringEvents = (groupId, data) => api.post(`/groups/${groupId}/events/recurring`, data);
 export const getEvent = (id) => api.get(`/events/${id}`);
 export const updateEvent = (id, data) => api.put(`/events/${id}`, data);
 export const deleteEvent = (id) => api.delete(`/events/${id}`);
+export const cloneEvent = (id, newDate) => api.post(`/events/${id}/clone`, { newDate });
 export const getUpcomingEvents = () => api.get('/events/user/upcoming');
 export const getReservedEvents = () => api.get('/events/user/reserved');
 export const getAllEvents = () => api.get('/events');

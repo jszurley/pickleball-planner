@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getEvent, reserveSpot, cancelReservation } from '../services/api';
+import { getEvent, reserveSpot, cancelReservation, cloneEvent } from '../services/api';
 import './EventModal.css';
 
 export default function EventModal({ eventId, onClose, onReservationChange }) {
@@ -9,6 +9,9 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showCloneModal, setShowCloneModal] = useState(false);
+  const [cloneDate, setCloneDate] = useState('');
+  const [cloneSuccess, setCloneSuccess] = useState('');
 
   useEffect(() => {
     loadEvent();
@@ -48,6 +51,27 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
       if (onReservationChange) onReservationChange();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to cancel reservation');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleClone = async () => {
+    if (!cloneDate) {
+      setError('Please select a date');
+      return;
+    }
+    setActionLoading(true);
+    setError('');
+    setCloneSuccess('');
+    try {
+      await cloneEvent(eventId, cloneDate);
+      setCloneSuccess('Event cloned successfully!');
+      setShowCloneModal(false);
+      setCloneDate('');
+      if (onReservationChange) onReservationChange();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to clone event');
     } finally {
       setActionLoading(false);
     }
@@ -103,6 +127,8 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
   const isFull = parseInt(event.reservation_count) >= event.max_spots;
   const spotsLeft = event.max_spots - parseInt(event.reservation_count);
   const isCreator = event.creator_id === user?.id;
+  const isAdmin = user?.role === 'admin';
+  const canClone = isCreator || isAdmin;
   const past = isPastEvent();
 
   return (
@@ -182,31 +208,78 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
           )}
         </div>
 
+        {cloneSuccess && <div className="alert alert-success">{cloneSuccess}</div>}
+
         <div className="event-modal-footer">
-          {past ? (
-            <span className="past-event-notice">This event has passed</span>
-          ) : event.is_reserved ? (
-            <button
-              className="btn btn-reserved"
-              onClick={handleCancel}
-              disabled={actionLoading}
-            >
-              {actionLoading ? 'Cancelling...' : 'Cancel My Reservation'}
-            </button>
-          ) : isFull ? (
-            <button className="btn btn-full" disabled>
-              Event is Full
-            </button>
-          ) : (
-            <button
-              className="btn btn-primary btn-lg"
-              onClick={handleReserve}
-              disabled={actionLoading}
-            >
-              {actionLoading ? 'Reserving...' : 'Reserve My Spot'}
-            </button>
-          )}
+          <div className="footer-actions">
+            {canClone && (
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={() => setShowCloneModal(true)}
+                disabled={actionLoading}
+              >
+                Clone Event
+              </button>
+            )}
+          </div>
+          <div className="footer-primary">
+            {past ? (
+              <span className="past-event-notice">This event has passed</span>
+            ) : event.is_reserved ? (
+              <button
+                className="btn btn-reserved"
+                onClick={handleCancel}
+                disabled={actionLoading}
+              >
+                {actionLoading ? 'Cancelling...' : 'Cancel My Reservation'}
+              </button>
+            ) : isFull ? (
+              <button className="btn btn-full" disabled>
+                Event is Full
+              </button>
+            ) : (
+              <button
+                className="btn btn-primary btn-lg"
+                onClick={handleReserve}
+                disabled={actionLoading}
+              >
+                {actionLoading ? 'Reserving...' : 'Reserve My Spot'}
+              </button>
+            )}
+          </div>
         </div>
+
+        {showCloneModal && (
+          <div className="clone-modal">
+            <h3>Clone Event</h3>
+            <p>Create a copy of this event on a different date.</p>
+            <div className="form-group">
+              <label htmlFor="cloneDate">New Date</label>
+              <input
+                type="date"
+                id="cloneDate"
+                value={cloneDate}
+                onChange={(e) => setCloneDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <div className="clone-modal-actions">
+              <button
+                className="btn btn-outline"
+                onClick={() => { setShowCloneModal(false); setCloneDate(''); }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleClone}
+                disabled={actionLoading || !cloneDate}
+              >
+                {actionLoading ? 'Cloning...' : 'Clone Event'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

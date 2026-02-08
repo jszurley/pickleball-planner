@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getGroup, getGroups, getLocations, createEvent, getEvent, updateEvent } from '../services/api';
+import { getGroup, getGroups, getLocations, createEvent, createRecurringEvents, getEvent, updateEvent } from '../services/api';
 import './CreateEvent.css';
 
 export default function CreateEvent() {
@@ -25,6 +25,11 @@ export default function CreateEvent() {
     endTime: '',
     locationId: '',
     maxSpots: 8
+  });
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringData, setRecurringData] = useState({
+    endDate: '',
+    frequency: 'weekly'
   });
 
   useEffect(() => {
@@ -88,30 +93,56 @@ export default function CreateEvent() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleRecurringChange = (e) => {
+    const { name, value } = e.target;
+    setRecurringData((prev) => ({ ...prev, [name]: value }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSubmitting(true);
 
     try {
-      const payload = {
-        title: formData.title,
-        eventDate: formData.eventDate,
-        startTime: formData.startTime,
-        endTime: formData.endTime,
-        locationId: formData.locationId || null,
-        maxSpots: parseInt(formData.maxSpots)
-      };
-
       const targetGroupId = isAdmin ? selectedGroupId : urlGroupId;
 
       if (isEdit) {
+        const payload = {
+          title: formData.title,
+          eventDate: formData.eventDate,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+          locationId: formData.locationId || null,
+          maxSpots: parseInt(formData.maxSpots)
+        };
         await updateEvent(eventId, payload);
+        navigate(`/groups/${targetGroupId}/events`);
+      } else if (isRecurring) {
+        const payload = {
+          title: formData.title,
+          startDate: formData.eventDate,
+          endDate: recurringData.endDate,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+          locationId: formData.locationId || null,
+          maxSpots: parseInt(formData.maxSpots),
+          frequency: recurringData.frequency
+        };
+        const response = await createRecurringEvents(targetGroupId, payload);
+        alert(`Created ${response.data.count} events!`);
+        navigate(`/groups/${targetGroupId}/events`);
       } else {
+        const payload = {
+          title: formData.title,
+          eventDate: formData.eventDate,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+          locationId: formData.locationId || null,
+          maxSpots: parseInt(formData.maxSpots)
+        };
         await createEvent(targetGroupId, payload);
+        navigate(`/groups/${targetGroupId}/events`);
       }
-
-      navigate(`/groups/${targetGroupId}/events`);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save event');
     } finally {
@@ -175,7 +206,7 @@ export default function CreateEvent() {
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="eventDate">Date</label>
+              <label htmlFor="eventDate">{isRecurring ? 'Start Date' : 'Date'}</label>
               <input
                 type="date"
                 id="eventDate"
@@ -211,6 +242,51 @@ export default function CreateEvent() {
               />
             </div>
           </div>
+
+          {!isEdit && (
+            <div className="form-group recurring-toggle">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={isRecurring}
+                  onChange={(e) => setIsRecurring(e.target.checked)}
+                />
+                <span>Create recurring events</span>
+              </label>
+            </div>
+          )}
+
+          {isRecurring && (
+            <div className="form-row recurring-options">
+              <div className="form-group">
+                <label htmlFor="endDate">End Date</label>
+                <input
+                  type="date"
+                  id="endDate"
+                  name="endDate"
+                  value={recurringData.endDate}
+                  onChange={handleRecurringChange}
+                  required={isRecurring}
+                  min={formData.eventDate || new Date().toISOString().split('T')[0]}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="frequency">Frequency</label>
+                <select
+                  id="frequency"
+                  name="frequency"
+                  value={recurringData.frequency}
+                  onChange={handleRecurringChange}
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="biweekly">Every 2 Weeks</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+            </div>
+          )}
 
           <div className="form-row">
             <div className="form-group">
