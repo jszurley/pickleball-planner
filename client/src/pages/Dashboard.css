@@ -58,6 +58,72 @@
   gap: 1rem;
 }
 
+/* Install App Banner */
+.install-banner {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  padding: 1.25rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.install-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.install-banner-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: white;
+  padding: 4px;
+}
+
+.install-banner-text strong {
+  display: block;
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
+}
+
+.install-banner-text p {
+  margin: 0;
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.install-banner-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.install-banner .btn-outline {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.5);
+  color: white;
+}
+
+.install-banner .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: white;
+}
+
+.install-banner .btn-primary {
+  background: white;
+  color: var(--primary-dark);
+}
+
+.install-banner .btn-primary:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
 @media (max-width: 768px) {
   .groups-grid {
     grid-template-columns: 1fr;
@@ -65,5 +131,19 @@
 
   .events-grid {
     grid-template-columns: 1fr;
+  }
+
+  .install-banner {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .install-banner-content {
+    flex-direction: column;
+  }
+
+  .install-banner-actions {
+    width: 100%;
+    justify-content: center;
   }
 }

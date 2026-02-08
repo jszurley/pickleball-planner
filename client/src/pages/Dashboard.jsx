@@ -11,9 +11,32 @@ export default function Dashboard() {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [allGroups, setAllGroups] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   const isAdmin = user?.role === 'admin';
   const groups = isAdmin ? allGroups : userGroups;
+
+  useEffect(() => {
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+      return;
+    }
+
+    const handler = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBanner(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -53,6 +76,19 @@ export default function Dashboard() {
     }
   };
 
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+
+    if (outcome === 'accepted') {
+      setShowInstallBanner(false);
+      setIsInstalled(true);
+    }
+    setDeferredPrompt(null);
+  };
+
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
@@ -63,6 +99,27 @@ export default function Dashboard() {
         <h1>Welcome, {user?.name}!</h1>
         <p>Manage your pickleball games and reservations</p>
       </div>
+
+      {/* Install App Banner */}
+      {showInstallBanner && !isInstalled && (
+        <div className="install-banner">
+          <div className="install-banner-content">
+            <img src="/icons/icon-72x72.png" alt="App icon" className="install-banner-icon" />
+            <div className="install-banner-text">
+              <strong>Get the App!</strong>
+              <p>Install Pickleball Planner for quick access from your home screen.</p>
+            </div>
+          </div>
+          <div className="install-banner-actions">
+            <button className="btn btn-outline btn-sm" onClick={() => setShowInstallBanner(false)}>
+              Maybe Later
+            </button>
+            <button className="btn btn-primary" onClick={handleInstall}>
+              Install App
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Your Groups */}
       <section className="dashboard-section">
