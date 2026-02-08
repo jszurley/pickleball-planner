@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getGroup, getLocations, createEvent, getEvent, updateEvent } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { getGroup, getGroups, getLocations, createEvent, getEvent, updateEvent } from '../services/api';
 import './CreateEvent.css';
 
 export default function CreateEvent() {
-  const { groupId, eventId } = useParams();
+  const { groupId: urlGroupId, eventId } = useParams();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const isEdit = !!eventId;
+  const isAdmin = user?.role === 'admin';
 
   const [group, setGroup] = useState(null);
+  const [allGroups, setAllGroups] = useState([]);
+  const [selectedGroupId, setSelectedGroupId] = useState(urlGroupId);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -24,16 +29,40 @@ export default function CreateEvent() {
 
   useEffect(() => {
     loadData();
-  }, [groupId, eventId]);
+  }, [urlGroupId, eventId, isAdmin]);
+
+  useEffect(() => {
+    if (selectedGroupId && allGroups.length > 0) {
+      const selectedGroup = allGroups.find(g => g.id.toString() === selectedGroupId.toString());
+      setGroup(selectedGroup || null);
+    }
+  }, [selectedGroupId, allGroups]);
 
   const loadData = async () => {
     try {
-      const [groupRes, locationsRes] = await Promise.all([
-        getGroup(groupId),
-        getLocations()
-      ]);
-      setGroup(groupRes.data);
-      setLocations(locationsRes.data);
+      const promises = [getLocations()];
+      if (isAdmin) {
+        promises.push(getGroups());
+      } else {
+        promises.push(getGroup(urlGroupId));
+      }
+
+      const results = await Promise.all(promises);
+      setLocations(results[0].data);
+
+      if (isAdmin) {
+        setAllGroups(results[1].data);
+        if (urlGroupId) {
+          setSelectedGroupId(urlGroupId);
+          const selectedGroup = results[1].data.find(g => g.id.toString() === urlGroupId.toString());
+          setGroup(selectedGroup || null);
+        } else if (results[1].data.length > 0) {
+          setSelectedGroupId(results[1].data[0].id);
+          setGroup(results[1].data[0]);
+        }
+      } else {
+        setGroup(results[1].data);
+      }
 
       if (isEdit) {
         const eventRes = await getEvent(eventId);
@@ -74,13 +103,15 @@ export default function CreateEvent() {
         maxSpots: parseInt(formData.maxSpots)
       };
 
+      const targetGroupId = isAdmin ? selectedGroupId : urlGroupId;
+
       if (isEdit) {
         await updateEvent(eventId, payload);
       } else {
-        await createEvent(groupId, payload);
+        await createEvent(targetGroupId, payload);
       }
 
-      navigate(`/groups/${groupId}/events`);
+      navigate(`/groups/${targetGroupId}/events`);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save event');
     } finally {
@@ -92,10 +123,14 @@ export default function CreateEvent() {
     return <div className="loading">Loading...</div>;
   }
 
+  const backUrl = isAdmin && selectedGroupId
+    ? `/groups/${selectedGroupId}/events`
+    : `/groups/${urlGroupId}/events`;
+
   return (
     <div className="create-event-page">
-      <Link to={`/groups/${groupId}/events`} className="back-link">
-        &larr; Back to {group?.name}
+      <Link to={backUrl} className="back-link">
+        &larr; Back to {group?.name || 'Group'}
       </Link>
 
       <div className="page-header">
@@ -107,6 +142,24 @@ export default function CreateEvent() {
         {error && <div className="alert alert-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
+          {isAdmin && allGroups.length > 0 && (
+            <div className="form-group">
+              <label htmlFor="groupSelect">Group</label>
+              <select
+                id="groupSelect"
+                value={selectedGroupId}
+                onChange={(e) => setSelectedGroupId(e.target.value)}
+                required
+              >
+                {allGroups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="form-group">
             <label htmlFor="title">Event Title</label>
             <input
@@ -193,7 +246,7 @@ export default function CreateEvent() {
           </div>
 
           <div className="form-actions">
-            <Link to={`/groups/${groupId}/events`} className="btn btn-outline">
+            <Link to={backUrl} className="btn btn-outline">
               Cancel
             </Link>
             <button type="submit" className="btn btn-primary" disabled={submitting}>

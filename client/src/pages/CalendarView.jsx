@@ -1,32 +1,47 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getUpcomingEvents } from '../services/api';
+import { getUpcomingEvents, getGroups, getAllEvents } from '../services/api';
 import Calendar from '../components/Calendar';
 import EventModal from '../components/EventModal';
 import './CalendarView.css';
 
 export default function CalendarView() {
-  const { groups } = useAuth();
+  const { user, groups: userGroups } = useAuth();
   const [events, setEvents] = useState([]);
+  const [allGroups, setAllGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [viewMode, setViewMode] = useState('calendar');
 
-  useEffect(() => {
-    loadEvents();
-  }, []);
+  const isAdmin = user?.role === 'admin';
+  const groups = isAdmin ? allGroups : userGroups;
 
-  const loadEvents = async () => {
+  useEffect(() => {
+    loadData();
+  }, [isAdmin]);
+
+  const loadData = async () => {
     try {
-      const response = await getUpcomingEvents();
-      setEvents(response.data);
+      if (isAdmin) {
+        const [eventsRes, groupsRes] = await Promise.all([
+          getAllEvents(),
+          getGroups()
+        ]);
+        setEvents(eventsRes.data);
+        setAllGroups(groupsRes.data);
+      } else {
+        const response = await getUpcomingEvents();
+        setEvents(response.data);
+      }
     } catch (error) {
-      console.error('Failed to load events:', error);
+      console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  const loadEvents = loadData;
 
   const handleEventClick = (event) => {
     setSelectedEventId(event.id);
@@ -52,8 +67,15 @@ export default function CalendarView() {
         </div>
         <div className="card">
           <p className="text-muted">
-            You're not in any groups yet. Please wait for an admin to assign you to groups.
+            {isAdmin
+              ? 'No groups exist yet. Create groups first to add events.'
+              : "You're not in any groups yet. Please wait for an admin to assign you to groups."}
           </p>
+          {isAdmin && (
+            <Link to="/admin/groups" className="btn btn-primary mt-1">
+              Create Groups
+            </Link>
+          )}
         </div>
       </div>
     );
@@ -64,9 +86,14 @@ export default function CalendarView() {
       <div className="calendar-view-header">
         <div className="page-header">
           <h1>Event Calendar</h1>
-          <p>View and register for upcoming events across all your groups</p>
+          <p>View and register for upcoming events{isAdmin ? '' : ' across all your groups'}</p>
         </div>
         <div className="view-controls">
+          {groups.length > 0 && (
+            <Link to={`/groups/${groups[0].id}/events/new`} className="btn btn-primary">
+              + Create Event
+            </Link>
+          )}
           <div className="view-toggle">
             <button
               className={`btn ${viewMode === 'calendar' ? 'btn-primary' : 'btn-outline'}`}

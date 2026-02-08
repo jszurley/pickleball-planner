@@ -1,19 +1,42 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getReservedEvents, getUpcomingEvents } from '../services/api';
+import { getReservedEvents, getUpcomingEvents, getGroups } from '../services/api';
 import EventCard from '../components/EventCard';
 import './Dashboard.css';
 
 export default function Dashboard() {
-  const { user, groups } = useAuth();
+  const { user, groups: userGroups } = useAuth();
   const [reservedEvents, setReservedEvents] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [allGroups, setAllGroups] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const isAdmin = user?.role === 'admin';
+  const groups = isAdmin ? allGroups : userGroups;
+
   useEffect(() => {
-    loadEvents();
-  }, []);
+    loadData();
+  }, [isAdmin]);
+
+  const loadData = async () => {
+    try {
+      const promises = [getReservedEvents(), getUpcomingEvents()];
+      if (isAdmin) {
+        promises.push(getGroups());
+      }
+      const results = await Promise.all(promises);
+      setReservedEvents(results[0].data);
+      setUpcomingEvents(results[1].data);
+      if (isAdmin && results[2]) {
+        setAllGroups(results[2].data);
+      }
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadEvents = async () => {
     try {
@@ -47,8 +70,15 @@ export default function Dashboard() {
         {groups.length === 0 ? (
           <div className="card">
             <p className="text-muted">
-              You're not in any groups yet. Please wait for an admin to assign you.
+              {isAdmin
+                ? 'No groups exist yet. Create groups in the Admin panel.'
+                : "You're not in any groups yet. Please wait for an admin to assign you."}
             </p>
+            {isAdmin && (
+              <Link to="/admin/groups" className="btn btn-primary mt-1">
+                Create Groups
+              </Link>
+            )}
           </div>
         ) : (
           <div className="groups-grid">
@@ -78,7 +108,7 @@ export default function Dashboard() {
               <EventCard
                 key={event.id}
                 event={event}
-                onReservationChange={loadEvents}
+                onReservationChange={loadData}
               />
             ))}
           </div>
@@ -105,7 +135,7 @@ export default function Dashboard() {
               <EventCard
                 key={event.id}
                 event={event}
-                onReservationChange={loadEvents}
+                onReservationChange={loadData}
               />
             ))}
           </div>
