@@ -56,7 +56,9 @@ export default function ManageEvents() {
   };
 
   const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
+    // Parse as local date to avoid timezone shift
+    const [year, month, day] = dateStr.split('T')[0].split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
