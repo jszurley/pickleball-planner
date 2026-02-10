@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getReservedEvents, getUpcomingEvents, getGroups } from '../services/api';
 import EventCard from '../components/EventCard';
+import EventModal from '../components/EventModal';
 import './Dashboard.css';
 
 export default function Dashboard() {
@@ -14,6 +15,7 @@ export default function Dashboard() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState(null);
 
   const isAdmin = user?.role === 'admin';
   const groups = isAdmin ? allGroups : userGroups;
@@ -154,12 +156,12 @@ export default function Dashboard() {
                   const hour = parseInt(hours);
                   const timeStr = `${hour % 12 || 12}:${minutes} ${hour >= 12 ? 'PM' : 'AM'}`;
                   return (
-                    <Link key={event.id} to="/calendar" className="upcoming-event-row reserved">
+                    <div key={event.id} className="upcoming-event-row reserved" onClick={() => setSelectedEventId(event.id)}>
                       <span className="upcoming-date">{dateStr}</span>
                       <span className="upcoming-title">{event.title}</span>
                       <span className="upcoming-time">{timeStr}</span>
                       <span className="upcoming-group">{event.group_name}</span>
-                    </Link>
+                    </div>
                   );
                 })}
               </div>
@@ -194,13 +196,13 @@ export default function Dashboard() {
               const hour = parseInt(hours);
               const timeStr = `${hour % 12 || 12}:${minutes} ${hour >= 12 ? 'PM' : 'AM'}`;
               return (
-                <Link key={event.id} to="/calendar" className={`upcoming-event-row ${event.is_reserved ? 'reserved' : ''}`}>
+                <div key={event.id} className={`upcoming-event-row ${event.is_reserved ? 'reserved' : ''}`} onClick={() => setSelectedEventId(event.id)}>
                   <span className="upcoming-date">{dateStr}</span>
                   <span className="upcoming-title">{event.title}</span>
                   <span className="upcoming-time">{timeStr}</span>
                   <span className="upcoming-group">{event.group_name}</span>
                   {event.is_reserved && <span className="upcoming-reserved-badge">Reserved</span>}
-                </Link>
+                </div>
               );
             })}
           </div>
@@ -236,6 +238,14 @@ export default function Dashboard() {
           </div>
         )}
       </section>
+
+      {selectedEventId && (
+        <EventModal
+          eventId={selectedEventId}
+          onClose={() => setSelectedEventId(null)}
+          onReservationChange={loadData}
+        />
+      )}
     </div>
   );
 }
