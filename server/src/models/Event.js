@@ -149,11 +149,26 @@ const Event = {
     );
   },
 
+  // Helper to format date as YYYY-MM-DD without timezone conversion
+  formatDateString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  },
+
+  // Helper to parse date string as local date
+  parseLocalDate(dateStr) {
+    const [year, month, day] = dateStr.split('-');
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  },
+
   // Create recurring events
   async createRecurring(groupId, creatorId, locationId, title, startDate, endDate, startTime, endTime, maxSpots, frequency, daysOfWeek = null) {
     const events = [];
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    // Parse dates as local to avoid timezone issues
+    const start = this.parseLocalDate(startDate);
+    const end = this.parseLocalDate(endDate);
 
     // For daily and weekly with daysOfWeek, iterate day by day and check if day matches
     if ((frequency === 'daily' || frequency === 'weekly') && daysOfWeek && daysOfWeek.length > 0) {
@@ -161,7 +176,7 @@ const Event = {
       while (currentDate <= end) {
         const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 6 = Saturday
         if (daysOfWeek.includes(dayOfWeek)) {
-          const dateStr = currentDate.toISOString().split('T')[0];
+          const dateStr = this.formatDateString(currentDate);
           const event = await this.create(
             groupId,
             creatorId,
@@ -200,7 +215,7 @@ const Event = {
 
     let currentDate = new Date(start);
     while (currentDate <= end) {
-      const dateStr = currentDate.toISOString().split('T')[0];
+      const dateStr = this.formatDateString(currentDate);
       const event = await this.create(
         groupId,
         creatorId,
