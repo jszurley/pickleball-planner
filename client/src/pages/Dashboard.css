@@ -186,6 +186,25 @@
   white-space: nowrap;
 }
 
+.upcoming-event-row.reserved {
+  background-color: rgba(76, 175, 80, 0.08);
+  border-left: 3px solid var(--primary);
+}
+
+.upcoming-event-row.reserved:hover {
+  background-color: rgba(76, 175, 80, 0.12);
+}
+
+.upcoming-reserved-badge {
+  font-size: 0.7rem;
+  color: white;
+  background: var(--primary);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 /* Install App Banner */
 .install-banner {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
@@ -293,5 +312,10 @@
   .upcoming-time {
     min-width: auto;
     text-align: left;
+  }
+
+  .upcoming-reserved-badge {
+    order: -1;
+    margin-left: auto;
   }
 }

@@ -172,11 +172,12 @@ export default function Dashboard() {
               const hour = parseInt(hours);
               const timeStr = `${hour % 12 || 12}:${minutes} ${hour >= 12 ? 'PM' : 'AM'}`;
               return (
-                <Link key={event.id} to="/calendar" className="upcoming-event-row">
+                <Link key={event.id} to="/calendar" className={`upcoming-event-row ${event.is_reserved ? 'reserved' : ''}`}>
                   <span className="upcoming-date">{dateStr}</span>
                   <span className="upcoming-title">{event.title}</span>
                   <span className="upcoming-time">{timeStr}</span>
                   <span className="upcoming-group">{event.group_name}</span>
+                  {event.is_reserved && <span className="upcoming-reserved-badge">Reserved</span>}
                 </Link>
               );
             })}
