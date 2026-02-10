@@ -137,20 +137,34 @@ export default function Dashboard() {
             </p>
           </div>
         ) : (
-          <div className="events-grid">
-            {reservedEvents.slice(0, 4).map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                onReservationChange={loadData}
-              />
-            ))}
-          </div>
-        )}
-        {reservedEvents.length > 4 && (
-          <p className="text-muted mt-1">
-            And {reservedEvents.length - 4} more...
-          </p>
+          <>
+            {/* First reservation as full card */}
+            <EventCard
+              event={reservedEvents[0]}
+              onReservationChange={loadData}
+            />
+            {/* Remaining reservations compact */}
+            {reservedEvents.length > 1 && (
+              <div className="upcoming-events-compact mt-1">
+                {reservedEvents.slice(1).map((event) => {
+                  const [y, m, d] = event.event_date.split('T')[0].split('-');
+                  const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+                  const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                  const [hours, minutes] = event.start_time.split(':');
+                  const hour = parseInt(hours);
+                  const timeStr = `${hour % 12 || 12}:${minutes} ${hour >= 12 ? 'PM' : 'AM'}`;
+                  return (
+                    <Link key={event.id} to="/calendar" className="upcoming-event-row reserved">
+                      <span className="upcoming-date">{dateStr}</span>
+                      <span className="upcoming-title">{event.title}</span>
+                      <span className="upcoming-time">{timeStr}</span>
+                      <span className="upcoming-group">{event.group_name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </section>
 
