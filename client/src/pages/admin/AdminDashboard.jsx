@@ -27,9 +27,10 @@ export default function AdminDashboard() {
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const upcomingEvents = eventsRes.data.filter(
-        (e) => new Date(e.event_date) >= today
-      );
+      const upcomingEvents = eventsRes.data.filter((e) => {
+        const [year, month, day] = e.event_date.split('T')[0].split('-');
+        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)) >= today;
+      });
 
       setStats({
         pendingCount: pendingRes.data.length,

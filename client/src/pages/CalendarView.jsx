@@ -123,7 +123,14 @@ export default function CalendarView() {
               <p className="text-muted">No upcoming events.</p>
             </div>
           ) : (
-            events.map((event) => (
+            [...events].sort((a, b) => {
+              const [ay, am, ad] = a.event_date.split('T')[0].split('-');
+              const [by, bm, bd] = b.event_date.split('T')[0].split('-');
+              const dateA = new Date(parseInt(ay), parseInt(am) - 1, parseInt(ad));
+              const dateB = new Date(parseInt(by), parseInt(bm) - 1, parseInt(bd));
+              if (dateA - dateB !== 0) return dateA - dateB;
+              return a.start_time.localeCompare(b.start_time);
+            }).map((event) => (
               <div
                 key={event.id}
                 className={`event-list-item ${event.is_reserved ? 'reserved' : ''}`}
@@ -131,10 +138,16 @@ export default function CalendarView() {
               >
                 <div className="event-list-date">
                   <span className="date-day">
-                    {new Date(event.event_date).getDate()}
+                    {(() => {
+                      const [y, m, d] = event.event_date.split('T')[0].split('-');
+                      return parseInt(d);
+                    })()}
                   </span>
                   <span className="date-month">
-                    {new Date(event.event_date).toLocaleDateString('en-US', { month: 'short' })}
+                    {(() => {
+                      const [y, m, d] = event.event_date.split('T')[0].split('-');
+                      return new Date(parseInt(y), parseInt(m) - 1, parseInt(d)).toLocaleDateString('en-US', { month: 'short' });
+                    })()}
                   </span>
                 </div>
                 <div className="event-list-details">

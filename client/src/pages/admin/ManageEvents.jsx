@@ -21,10 +21,14 @@ export default function ManageEvents() {
       today.setHours(0, 0, 0, 0);
 
       // Filter to today and future, then sort by date
+      const parseDate = (dateStr) => {
+        const [year, month, day] = dateStr.split('T')[0].split('-');
+        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      };
       const upcomingEvents = response.data
-        .filter((e) => new Date(e.event_date) >= today)
+        .filter((e) => parseDate(e.event_date) >= today)
         .sort((a, b) => {
-          const dateCompare = new Date(a.event_date) - new Date(b.event_date);
+          const dateCompare = parseDate(a.event_date) - parseDate(b.event_date);
           if (dateCompare !== 0) return dateCompare;
           return a.start_time.localeCompare(b.start_time);
         });

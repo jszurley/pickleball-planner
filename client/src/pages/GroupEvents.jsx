@@ -67,14 +67,16 @@ export default function GroupEvents() {
   }
 
   const upcomingEvents = events.filter((e) => {
-    const eventDate = new Date(e.event_date);
+    const [year, month, day] = e.event_date.split('T')[0].split('-');
+    const eventDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return eventDate >= today;
   });
 
   const pastEvents = events.filter((e) => {
-    const eventDate = new Date(e.event_date);
+    const [year, month, day] = e.event_date.split('T')[0].split('-');
+    const eventDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return eventDate < today;

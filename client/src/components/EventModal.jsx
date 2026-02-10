@@ -96,7 +96,9 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
   };
 
   const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
+    // Parse date string as local date to avoid timezone shift
+    const [year, month, day] = dateStr.split('T')[0].split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -115,7 +117,8 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
 
   const isPastEvent = () => {
     if (!event) return false;
-    const eventDate = new Date(event.event_date);
+    const [year, month, day] = event.event_date.split('T')[0].split('-');
+    const eventDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return eventDate < today;
