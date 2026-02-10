@@ -174,11 +174,19 @@ export default function Dashboard() {
           <h2>Upcoming Events</h2>
           <Link to="/calendar" className="view-all-link">View All &rarr;</Link>
         </div>
-        {upcomingEvents.length === 0 ? (
-          <p className="text-muted">No upcoming events in your groups.</p>
-        ) : (
-          <div className="upcoming-events-compact">
-            {upcomingEvents.slice(0, 3).map((event) => {
+        {(() => {
+          const now = new Date();
+          const filteredEvents = upcomingEvents.filter((event) => {
+            const [y, m, d] = event.event_date.split('T')[0].split('-');
+            const [hours, minutes] = event.start_time.split(':');
+            const eventDateTime = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), parseInt(hours), parseInt(minutes));
+            return eventDateTime > now;
+          });
+          return filteredEvents.length === 0 ? (
+            <p className="text-muted">No upcoming events in your groups.</p>
+          ) : (
+            <div className="upcoming-events-compact">
+              {filteredEvents.slice(0, 3).map((event) => {
               const [y, m, d] = event.event_date.split('T')[0].split('-');
               const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
               const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -196,7 +204,8 @@ export default function Dashboard() {
               );
             })}
           </div>
-        )}
+          );
+        })()}
       </section>
 
       {/* Your Groups */}

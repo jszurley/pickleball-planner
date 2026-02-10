@@ -126,10 +126,9 @@ export default function CalendarView() {
             [...events]
               .filter((event) => {
                 const [y, m, d] = event.event_date.split('T')[0].split('-');
-                const eventDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                return eventDate >= today;
+                const [hours, minutes] = event.start_time.split(':');
+                const eventDateTime = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), parseInt(hours), parseInt(minutes));
+                return eventDateTime > new Date();
               })
               .sort((a, b) => {
                 const [ay, am, ad] = a.event_date.split('T')[0].split('-');
