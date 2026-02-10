@@ -105,6 +105,87 @@
   gap: 1rem;
 }
 
+/* Compact Upcoming Events */
+.section-header-inline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.section-header-inline h2 {
+  margin-bottom: 0;
+}
+
+.view-all-link {
+  font-size: 0.875rem;
+  color: var(--secondary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.view-all-link:hover {
+  text-decoration: underline;
+}
+
+.upcoming-events-compact {
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.upcoming-event-row {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  gap: 1rem;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid var(--border);
+  transition: background-color 0.15s;
+}
+
+.upcoming-event-row:last-child {
+  border-bottom: none;
+}
+
+.upcoming-event-row:hover {
+  background-color: var(--background);
+  text-decoration: none;
+}
+
+.upcoming-date {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  min-width: 90px;
+}
+
+.upcoming-title {
+  flex: 1;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.upcoming-time {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  min-width: 70px;
+  text-align: right;
+}
+
+.upcoming-group {
+  font-size: 0.75rem;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
 /* Install App Banner */
 .install-banner {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
@@ -192,5 +273,25 @@
   .install-banner-actions {
     width: 100%;
     justify-content: center;
+  }
+
+  .upcoming-event-row {
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+  }
+
+  .upcoming-date {
+    min-width: auto;
+  }
+
+  .upcoming-title {
+    order: -1;
+    flex-basis: 100%;
+    margin-bottom: 0.25rem;
+  }
+
+  .upcoming-time {
+    min-width: auto;
+    text-align: left;
   }
 }

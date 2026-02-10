@@ -123,14 +123,22 @@ export default function CalendarView() {
               <p className="text-muted">No upcoming events.</p>
             </div>
           ) : (
-            [...events].sort((a, b) => {
-              const [ay, am, ad] = a.event_date.split('T')[0].split('-');
-              const [by, bm, bd] = b.event_date.split('T')[0].split('-');
-              const dateA = new Date(parseInt(ay), parseInt(am) - 1, parseInt(ad));
-              const dateB = new Date(parseInt(by), parseInt(bm) - 1, parseInt(bd));
-              if (dateA - dateB !== 0) return dateA - dateB;
-              return a.start_time.localeCompare(b.start_time);
-            }).map((event) => (
+            [...events]
+              .filter((event) => {
+                const [y, m, d] = event.event_date.split('T')[0].split('-');
+                const eventDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return eventDate >= today;
+              })
+              .sort((a, b) => {
+                const [ay, am, ad] = a.event_date.split('T')[0].split('-');
+                const [by, bm, bd] = b.event_date.split('T')[0].split('-');
+                const dateA = new Date(parseInt(ay), parseInt(am) - 1, parseInt(ad));
+                const dateB = new Date(parseInt(by), parseInt(bm) - 1, parseInt(bd));
+                if (dateA - dateB !== 0) return dateA - dateB;
+                return a.start_time.localeCompare(b.start_time);
+              }).map((event) => (
               <div
                 key={event.id}
                 className={`event-list-item ${event.is_reserved ? 'reserved' : ''}`}

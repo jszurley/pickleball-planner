@@ -127,35 +127,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Your Groups */}
-      <section className="dashboard-section">
-        <h2>Your Groups</h2>
-        {groups.length === 0 ? (
-          <div className="card">
-            <p className="text-muted">
-              {isAdmin
-                ? 'No groups exist yet. Create groups in the Admin panel.'
-                : "You're not in any groups yet. Please wait for an admin to assign you."}
-            </p>
-            {isAdmin && (
-              <Link to="/admin/groups" className="btn btn-primary mt-1">
-                Create Groups
-              </Link>
-            )}
-          </div>
-        ) : (
-          <div className="groups-grid">
-            {groups.map((group) => (
-              <Link key={group.id} to={`/groups/${group.id}/events`} className="group-card">
-                <h3>{group.name}</h3>
-                {group.description && <p>{group.description}</p>}
-                <span className="group-link">View Events &rarr;</span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
       {/* Your Reservations */}
       <section className="dashboard-section">
         <h2>Your Reservations ({reservedEvents.length})</h2>
@@ -183,30 +154,62 @@ export default function Dashboard() {
         )}
       </section>
 
-      {/* Upcoming Events */}
+      {/* Upcoming Events - Compact */}
       <section className="dashboard-section">
-        <h2>Upcoming Events</h2>
+        <div className="section-header-inline">
+          <h2>Upcoming Events</h2>
+          <Link to="/calendar" className="view-all-link">View All &rarr;</Link>
+        </div>
         {upcomingEvents.length === 0 ? (
-          <div className="card">
-            <p className="text-muted">
-              No upcoming events in your groups.
-            </p>
-          </div>
+          <p className="text-muted">No upcoming events in your groups.</p>
         ) : (
-          <div className="events-grid">
-            {upcomingEvents.slice(0, 6).map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                onReservationChange={loadData}
-              />
-            ))}
+          <div className="upcoming-events-compact">
+            {upcomingEvents.slice(0, 3).map((event) => {
+              const [y, m, d] = event.event_date.split('T')[0].split('-');
+              const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+              const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+              const [hours, minutes] = event.start_time.split(':');
+              const hour = parseInt(hours);
+              const timeStr = `${hour % 12 || 12}:${minutes} ${hour >= 12 ? 'PM' : 'AM'}`;
+              return (
+                <Link key={event.id} to="/calendar" className="upcoming-event-row">
+                  <span className="upcoming-date">{dateStr}</span>
+                  <span className="upcoming-title">{event.title}</span>
+                  <span className="upcoming-time">{timeStr}</span>
+                  <span className="upcoming-group">{event.group_name}</span>
+                </Link>
+              );
+            })}
           </div>
         )}
-        {upcomingEvents.length > 6 && (
-          <p className="text-muted mt-1">
-            View your groups to see all events.
-          </p>
+      </section>
+
+      {/* Your Groups */}
+      <section className="dashboard-section">
+        <h2>Your Groups</h2>
+        {groups.length === 0 ? (
+          <div className="card">
+            <p className="text-muted">
+              {isAdmin
+                ? 'No groups exist yet. Create groups in the Admin panel.'
+                : "You're not in any groups yet. Please wait for an admin to assign you."}
+            </p>
+            {isAdmin && (
+              <Link to="/admin/groups" className="btn btn-primary mt-1">
+                Create Groups
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="groups-grid">
+            {groups.map((group) => (
+              <Link key={group.id} to={`/groups/${group.id}/events`} className="group-card">
+                <h3>{group.name}</h3>
+                {group.description && <p>{group.description}</p>}
+                <span className="group-link">View Events &rarr;</span>
+              </Link>
+            ))}
+          </div>
         )}
       </section>
     </div>
