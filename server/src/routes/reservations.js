@@ -10,6 +10,12 @@ const router = express.Router();
 router.post('/events/:eventId/reserve', auth, async (req, res) => {
   try {
     const { eventId } = req.params;
+    const { guestCount = 0 } = req.body || {};
+
+    const guests = parseInt(guestCount) || 0;
+    if (guests < 0 || guests > 3) {
+      return res.status(400).json({ error: 'Guest count must be between 0 and 3' });
+    }
 
     const event = await Event.findById(eventId);
     if (!event) {
@@ -32,7 +38,7 @@ router.post('/events/:eventId/reserve', auth, async (req, res) => {
       return res.status(400).json({ error: 'Cannot reserve for past events' });
     }
 
-    const reservation = await Reservation.create(eventId, req.user.id);
+    const reservation = await Reservation.create(eventId, req.user.id, guests);
 
     res.status(201).json({
       message: 'Reservation successful',
@@ -40,13 +46,46 @@ router.post('/events/:eventId/reserve', auth, async (req, res) => {
     });
   } catch (error) {
     if (error.message === 'Event is full') {
-      return res.status(400).json({ error: 'Event is full' });
+      return res.status(400).json({ error: 'Not enough spots available' });
     }
     if (error.message === 'Already reserved') {
       return res.status(400).json({ error: 'You already have a reservation' });
     }
     console.error('Reserve error:', error);
     res.status(500).json({ error: 'Failed to reserve spot' });
+  }
+});
+
+// Update guest count on existing reservation
+router.put('/events/:eventId/reserve', auth, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { guestCount } = req.body;
+
+    if (guestCount === undefined || guestCount === null) {
+      return res.status(400).json({ error: 'Guest count is required' });
+    }
+
+    const guests = parseInt(guestCount);
+    if (isNaN(guests) || guests < 0 || guests > 3) {
+      return res.status(400).json({ error: 'Guest count must be between 0 and 3' });
+    }
+
+    const reservation = await Reservation.updateGuestCount(eventId, req.user.id, guests);
+
+    res.json({
+      message: 'Guest count updated',
+      reservation
+    });
+  } catch (error) {
+    if (error.message === 'Reservation not found') {
+      return res.status(404).json({ error: 'Reservation not found' });
+    }
+    if (error.message === 'Not enough spots for that many guests') {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Update guest count error:', error);
+    res.status(500).json({ error: 'Failed to update guest count' });
   }
 });
 

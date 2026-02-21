@@ -27,12 +27,16 @@ router.get('/groups/:groupId/events', auth, async (req, res) => {
       events = await Event.findByGroup(groupId);
     }
 
-    // Add is_reserved flag for each event
+    // Add is_reserved flag and my_guest_count for each event
     const eventsWithReservationStatus = await Promise.all(
       events.map(async (event) => {
         const Reservation = require('../models/Reservation');
-        const isReserved = await Reservation.exists(event.id, req.user.id);
-        return { ...event, is_reserved: isReserved };
+        const userReservation = await Reservation.findByEventAndUser(event.id, req.user.id);
+        return {
+          ...event,
+          is_reserved: !!userReservation,
+          my_guest_count: userReservation ? userReservation.guest_count : 0
+        };
       })
     );
 
@@ -140,10 +144,15 @@ router.get('/events/:id', auth, async (req, res) => {
     }
 
     const Reservation = require('../models/Reservation');
-    const isReserved = await Reservation.exists(event.id, req.user.id);
+    const userReservation = await Reservation.findByEventAndUser(event.id, req.user.id);
     const reservations = await Reservation.findByEvent(event.id);
 
-    res.json({ ...event, is_reserved: isReserved, reservations });
+    res.json({
+      ...event,
+      is_reserved: !!userReservation,
+      my_guest_count: userReservation ? userReservation.guest_count : 0,
+      reservations
+    });
   } catch (error) {
     console.error('Get event error:', error);
     res.status(500).json({ error: 'Failed to get event' });

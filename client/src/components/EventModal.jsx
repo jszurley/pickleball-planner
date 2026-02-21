@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getEvent, reserveSpot, cancelReservation, cloneEvent, deleteEvent } from '../services/api';
+import { getEvent, reserveSpot, cancelReservation, cloneEvent, deleteEvent, updateGuestCount } from '../services/api';
 import './EventModal.css';
 
 export default function EventModal({ eventId, onClose, onReservationChange }) {
@@ -15,6 +15,7 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
   const [cloneDate, setCloneDate] = useState('');
   const [cloneSuccess, setCloneSuccess] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [guestCount, setGuestCount] = useState(0);
 
   useEffect(() => {
     loadEvent();
@@ -24,6 +25,7 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
     try {
       const response = await getEvent(eventId);
       setEvent(response.data);
+      setGuestCount(response.data.my_guest_count || 0);
     } catch (err) {
       setError('Failed to load event details');
     } finally {
@@ -35,7 +37,7 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
     setActionLoading(true);
     setError('');
     try {
-      await reserveSpot(eventId);
+      await reserveSpot(eventId, guestCount);
       await loadEvent();
       if (onReservationChange) onReservationChange();
     } catch (err) {
@@ -50,10 +52,26 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
     setError('');
     try {
       await cancelReservation(eventId);
+      setGuestCount(0);
       await loadEvent();
       if (onReservationChange) onReservationChange();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to cancel reservation');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpdateGuests = async (newCount) => {
+    setActionLoading(true);
+    setError('');
+    try {
+      await updateGuestCount(eventId, newCount);
+      setGuestCount(newCount);
+      await loadEvent();
+      if (onReservationChange) onReservationChange();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to update guest count');
     } finally {
       setActionLoading(false);
     }
@@ -153,6 +171,11 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
   const canClone = isCreator || isAdmin;
   const past = isPastEvent();
 
+  // Calculate max guests allowed based on available spots
+  const maxAllowedGuests = event.is_reserved
+    ? Math.min(3, spotsLeft + parseInt(event.my_guest_count || 0))
+    : Math.min(3, spotsLeft - 1);
+
   const handleEdit = () => {
     navigate(`/groups/${event.group_id}/events/${event.id}/edit`);
   };
@@ -227,6 +250,9 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
                   <li key={r.id}>
                     {r.user_name}
                     {r.user_id === user?.id && <span className="you-badge">(You)</span>}
+                    {parseInt(r.guest_count) > 0 && (
+                      <span className="guest-badge">+{r.guest_count} guest{parseInt(r.guest_count) > 1 ? 's' : ''}</span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -269,25 +295,66 @@ export default function EventModal({ eventId, onClose, onReservationChange }) {
             {past ? (
               <span className="past-event-notice">This event has passed</span>
             ) : event.is_reserved ? (
-              <button
-                className="btn btn-reserved"
-                onClick={handleCancel}
-                disabled={actionLoading}
-              >
-                {actionLoading ? 'Cancelling...' : 'Cancel My Reservation'}
-              </button>
+              <div className="reserved-actions">
+                <div className="guest-selector">
+                  <span className="guest-label">Guests</span>
+                  <div className="guest-controls">
+                    <button
+                      className="btn btn-outline btn-sm guest-btn"
+                      onClick={() => handleUpdateGuests(Math.max(0, guestCount - 1))}
+                      disabled={guestCount <= 0 || actionLoading}
+                    >-</button>
+                    <span className="guest-count-display">{guestCount}</span>
+                    <button
+                      className="btn btn-outline btn-sm guest-btn"
+                      onClick={() => handleUpdateGuests(Math.min(maxAllowedGuests, guestCount + 1))}
+                      disabled={guestCount >= maxAllowedGuests || actionLoading}
+                    >+</button>
+                  </div>
+                </div>
+                <button
+                  className="btn btn-reserved"
+                  onClick={handleCancel}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? 'Cancelling...' : 'Cancel My Reservation'}
+                </button>
+              </div>
             ) : isFull ? (
               <button className="btn btn-full" disabled>
                 Event is Full
               </button>
             ) : (
-              <button
-                className="btn btn-primary btn-lg"
-                onClick={handleReserve}
-                disabled={actionLoading}
-              >
-                {actionLoading ? 'Reserving...' : 'Reserve My Spot'}
-              </button>
+              <div className="reserve-actions">
+                <div className="guest-selector">
+                  <span className="guest-label">Bringing guests?</span>
+                  <div className="guest-controls">
+                    <button
+                      className="btn btn-outline btn-sm guest-btn"
+                      onClick={() => setGuestCount(Math.max(0, guestCount - 1))}
+                      disabled={guestCount <= 0}
+                    >-</button>
+                    <span className="guest-count-display">{guestCount}</span>
+                    <button
+                      className="btn btn-outline btn-sm guest-btn"
+                      onClick={() => setGuestCount(Math.min(maxAllowedGuests, guestCount + 1))}
+                      disabled={guestCount >= maxAllowedGuests || maxAllowedGuests <= 0}
+                    >+</button>
+                  </div>
+                  {guestCount > 0 && (
+                    <span className="guest-note">
+                      Reserving {1 + guestCount} spot{1 + guestCount > 1 ? 's' : ''} total
+                    </span>
+                  )}
+                </div>
+                <button
+                  className="btn btn-primary btn-lg"
+                  onClick={handleReserve}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? 'Reserving...' : 'Reserve My Spot'}
+                </button>
+              </div>
             )}
           </div>
         </div>

@@ -47,7 +47,7 @@ export default function ReservationButton({ event, onReservationChange }) {
           onClick={handleCancel}
           disabled={loading}
         >
-          {loading ? 'Cancelling...' : 'Reserved - Click to Cancel'}
+          {loading ? 'Cancelling...' : `Reserved${parseInt(event.my_guest_count) > 0 ? ` (+${event.my_guest_count})` : ''} - Click to Cancel`}
         </button>
         {error && <span className="reservation-error">{error}</span>}
       </div>

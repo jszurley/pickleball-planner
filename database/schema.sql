@@ -65,6 +65,7 @@ CREATE TABLE reservations (
     id SERIAL PRIMARY KEY,
     event_id INTEGER REFERENCES events(id) ON DELETE CASCADE NOT NULL,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+    guest_count INTEGER NOT NULL DEFAULT 0 CHECK (guest_count >= 0 AND guest_count <= 3),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (event_id, user_id)
 );

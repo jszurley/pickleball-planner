@@ -102,12 +102,15 @@ export default function EventCard({ event, onReservationChange, onEdit, onDelete
             className="attendees-toggle"
             onClick={() => setShowAttendees(!showAttendees)}
           >
-            {showAttendees ? 'Hide' : 'Show'} attendees ({event.reservations.length})
+            {showAttendees ? 'Hide' : 'Show'} attendees ({parseInt(event.reservation_count)})
           </button>
           {showAttendees && (
             <ul className="attendees-list">
               {event.reservations.map((r) => (
-                <li key={r.id}>{r.user_name}</li>
+                <li key={r.id}>
+                  {r.user_name}
+                  {parseInt(r.guest_count) > 0 && ` (+${r.guest_count} guest${parseInt(r.guest_count) > 1 ? 's' : ''})`}
+                </li>
               ))}
             </ul>
           )}

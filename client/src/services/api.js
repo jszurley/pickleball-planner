@@ -75,7 +75,8 @@ export const getReservedEvents = () => api.get('/events/user/reserved');
 export const getAllEvents = () => api.get('/events');
 
 // Reservations
-export const reserveSpot = (eventId) => api.post(`/events/${eventId}/reserve`);
+export const reserveSpot = (eventId, guestCount = 0) => api.post(`/events/${eventId}/reserve`, { guestCount });
+export const updateGuestCount = (eventId, guestCount) => api.put(`/events/${eventId}/reserve`, { guestCount });
 export const cancelReservation = (eventId) => api.delete(`/events/${eventId}/reserve`);
 export const getEventReservations = (eventId) => api.get(`/events/${eventId}/reservations`);
 

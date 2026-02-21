@@ -17,7 +17,7 @@ const Event = {
               l.name as location_name, l.address as location_address,
               u.name as creator_name, u.email as creator_email,
               g.name as group_name,
-              (SELECT COUNT(*) FROM reservations r WHERE r.event_id = e.id) as reservation_count
+              COALESCE((SELECT SUM(1 + COALESCE(r.guest_count, 0)) FROM reservations r WHERE r.event_id = e.id), 0) as reservation_count
        FROM events e
        LEFT JOIN locations l ON e.location_id = l.id
        LEFT JOIN users u ON e.creator_id = u.id
@@ -33,7 +33,7 @@ const Event = {
       `SELECT e.*,
               l.name as location_name, l.address as location_address,
               u.name as creator_name,
-              (SELECT COUNT(*) FROM reservations r WHERE r.event_id = e.id) as reservation_count
+              COALESCE((SELECT SUM(1 + COALESCE(r.guest_count, 0)) FROM reservations r WHERE r.event_id = e.id), 0) as reservation_count
        FROM events e
        LEFT JOIN locations l ON e.location_id = l.id
        LEFT JOIN users u ON e.creator_id = u.id
@@ -50,7 +50,7 @@ const Event = {
       `SELECT e.*,
               l.name as location_name, l.address as location_address,
               u.name as creator_name,
-              (SELECT COUNT(*) FROM reservations r WHERE r.event_id = e.id) as reservation_count
+              COALESCE((SELECT SUM(1 + COALESCE(r.guest_count, 0)) FROM reservations r WHERE r.event_id = e.id), 0) as reservation_count
        FROM events e
        LEFT JOIN locations l ON e.location_id = l.id
        LEFT JOIN users u ON e.creator_id = u.id
@@ -67,8 +67,9 @@ const Event = {
               l.name as location_name, l.address as location_address,
               u.name as creator_name,
               g.name as group_name,
-              (SELECT COUNT(*) FROM reservations r WHERE r.event_id = e.id) as reservation_count,
-              EXISTS(SELECT 1 FROM reservations r WHERE r.event_id = e.id AND r.user_id = $1) as is_reserved
+              COALESCE((SELECT SUM(1 + COALESCE(r.guest_count, 0)) FROM reservations r WHERE r.event_id = e.id), 0) as reservation_count,
+              EXISTS(SELECT 1 FROM reservations r WHERE r.event_id = e.id AND r.user_id = $1) as is_reserved,
+              COALESCE((SELECT r.guest_count FROM reservations r WHERE r.event_id = e.id AND r.user_id = $1), 0) as my_guest_count
        FROM events e
        INNER JOIN user_groups ug ON e.group_id = ug.group_id AND ug.user_id = $1
        LEFT JOIN locations l ON e.location_id = l.id
@@ -87,8 +88,9 @@ const Event = {
               l.name as location_name, l.address as location_address,
               u.name as creator_name,
               g.name as group_name,
-              (SELECT COUNT(*) FROM reservations r WHERE r.event_id = e.id) as reservation_count,
-              true as is_reserved
+              COALESCE((SELECT SUM(1 + COALESCE(r.guest_count, 0)) FROM reservations r WHERE r.event_id = e.id), 0) as reservation_count,
+              true as is_reserved,
+              res.guest_count as my_guest_count
        FROM events e
        INNER JOIN reservations res ON e.id = res.event_id AND res.user_id = $1
        LEFT JOIN locations l ON e.location_id = l.id
@@ -122,7 +124,7 @@ const Event = {
               l.name as location_name, l.address as location_address,
               u.name as creator_name,
               g.name as group_name,
-              (SELECT COUNT(*) FROM reservations r WHERE r.event_id = e.id) as reservation_count
+              COALESCE((SELECT SUM(1 + COALESCE(r.guest_count, 0)) FROM reservations r WHERE r.event_id = e.id), 0) as reservation_count
        FROM events e
        LEFT JOIN locations l ON e.location_id = l.id
        LEFT JOIN users u ON e.creator_id = u.id

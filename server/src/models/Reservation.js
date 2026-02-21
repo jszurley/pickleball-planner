@@ -1,7 +1,12 @@
 const pool = require('../config/db');
 
 const Reservation = {
-  async create(eventId, userId) {
+  async create(eventId, userId, guestCount = 0) {
+    const guests = parseInt(guestCount) || 0;
+    if (guests < 0 || guests > 3) {
+      throw new Error('Guest count must be between 0 and 3');
+    }
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -9,7 +14,7 @@ const Reservation = {
       // Check current reservation count and max spots
       const eventResult = await client.query(
         `SELECT e.max_spots,
-                (SELECT COUNT(*) FROM reservations r WHERE r.event_id = e.id) as current_count
+                COALESCE((SELECT SUM(1 + COALESCE(r.guest_count, 0)) FROM reservations r WHERE r.event_id = e.id), 0) as current_count
          FROM events e
          WHERE e.id = $1
          FOR UPDATE`,
@@ -22,7 +27,7 @@ const Reservation = {
 
       const { max_spots, current_count } = eventResult.rows[0];
 
-      if (parseInt(current_count) >= max_spots) {
+      if (parseInt(current_count) + 1 + guests > max_spots) {
         throw new Error('Event is full');
       }
 
@@ -38,14 +43,66 @@ const Reservation = {
 
       // Create reservation
       const result = await client.query(
-        `INSERT INTO reservations (event_id, user_id)
-         VALUES ($1, $2)
+        `INSERT INTO reservations (event_id, user_id, guest_count)
+         VALUES ($1, $2, $3)
          RETURNING *`,
-        [eventId, userId]
+        [eventId, userId, guests]
       );
 
       await client.query('COMMIT');
       return result.rows[0];
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
+
+  async updateGuestCount(eventId, userId, guestCount) {
+    const guests = parseInt(guestCount) || 0;
+    if (guests < 0 || guests > 3) {
+      throw new Error('Guest count must be between 0 and 3');
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const result = await client.query(
+        `SELECT e.max_spots,
+                COALESCE((SELECT SUM(1 + COALESCE(r.guest_count, 0)) FROM reservations r WHERE r.event_id = e.id), 0) as current_count,
+                COALESCE((SELECT r.guest_count FROM reservations r WHERE r.event_id = e.id AND r.user_id = $2), 0) as my_guest_count
+         FROM events e
+         WHERE e.id = $1
+         FOR UPDATE`,
+        [eventId, userId]
+      );
+
+      if (result.rows.length === 0) {
+        throw new Error('Event not found');
+      }
+
+      const { max_spots, current_count, my_guest_count } = result.rows[0];
+      const newTotal = parseInt(current_count) - parseInt(my_guest_count) + guests;
+
+      if (newTotal > max_spots) {
+        throw new Error('Not enough spots for that many guests');
+      }
+
+      const updateResult = await client.query(
+        `UPDATE reservations SET guest_count = $3
+         WHERE event_id = $1 AND user_id = $2
+         RETURNING *`,
+        [eventId, userId, guests]
+      );
+
+      if (updateResult.rows.length === 0) {
+        throw new Error('Reservation not found');
+      }
+
+      await client.query('COMMIT');
+      return updateResult.rows[0];
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -92,6 +149,14 @@ const Reservation = {
       [eventId, userId]
     );
     return result.rows.length > 0;
+  },
+
+  async findByEventAndUser(eventId, userId) {
+    const result = await pool.query(
+      'SELECT * FROM reservations WHERE event_id = $1 AND user_id = $2',
+      [eventId, userId]
+    );
+    return result.rows[0] || null;
   }
 };
 

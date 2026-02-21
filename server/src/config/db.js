@@ -96,10 +96,16 @@ if (USE_SQLITE) {
           id SERIAL PRIMARY KEY,
           event_id INTEGER REFERENCES events(id) ON DELETE CASCADE NOT NULL,
           user_id INTEGER REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+          guest_count INTEGER NOT NULL DEFAULT 0 CHECK (guest_count >= 0 AND guest_count <= 3),
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           UNIQUE (event_id, user_id)
         )
       `);
+
+      // Add guest_count column if it doesn't exist (migration for existing databases)
+      await pool.query(`
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS guest_count INTEGER NOT NULL DEFAULT 0
+      `).catch(() => {});
 
       // Create indexes
       await pool.query('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');

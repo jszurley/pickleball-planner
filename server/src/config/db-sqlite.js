@@ -110,10 +110,18 @@ function initSchema() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       event_id INTEGER REFERENCES events(id) ON DELETE CASCADE NOT NULL,
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+      guest_count INTEGER NOT NULL DEFAULT 0 CHECK (guest_count >= 0 AND guest_count <= 3),
       created_at TEXT DEFAULT (datetime('now')),
       UNIQUE (event_id, user_id)
     )
   `);
+
+  // Add guest_count column if it doesn't exist (migration for existing databases)
+  try {
+    db.run('ALTER TABLE reservations ADD COLUMN guest_count INTEGER NOT NULL DEFAULT 0');
+  } catch (e) {
+    // Column may already exist
+  }
 
   // Create indexes
   db.run('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
