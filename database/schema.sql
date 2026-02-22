@@ -3,6 +3,7 @@
 -- Drop tables if they exist (for clean setup)
 DROP TABLE IF EXISTS reservations CASCADE;
 DROP TABLE IF EXISTS events CASCADE;
+DROP TABLE IF EXISTS group_locations CASCADE;
 DROP TABLE IF EXISTS user_groups CASCADE;
 DROP TABLE IF EXISTS locations CASCADE;
 DROP TABLE IF EXISTS groups CASCADE;
@@ -15,6 +16,9 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
     role VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (role IN ('pending', 'member', 'admin')),
+    level_of_play VARCHAR(20) CHECK (level_of_play IN ('beginner', 'intermediate', 'expert')),
+    dupr_rating NUMERIC(3,1),
+    certified_rating BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -70,6 +74,13 @@ CREATE TABLE reservations (
     UNIQUE (event_id, user_id)
 );
 
+-- Group-Locations junction table
+CREATE TABLE group_locations (
+    group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
+    location_id INTEGER REFERENCES locations(id) ON DELETE CASCADE,
+    PRIMARY KEY (group_id, location_id)
+);
+
 -- Group join requests table
 CREATE TABLE group_requests (
     id SERIAL PRIMARY KEY,
@@ -88,6 +99,8 @@ CREATE INDEX idx_events_group_id ON events(group_id);
 CREATE INDEX idx_events_event_date ON events(event_date);
 CREATE INDEX idx_reservations_event_id ON reservations(event_id);
 CREATE INDEX idx_reservations_user_id ON reservations(user_id);
+CREATE INDEX idx_group_locations_group_id ON group_locations(group_id);
+CREATE INDEX idx_group_locations_location_id ON group_locations(location_id);
 CREATE INDEX idx_group_requests_user_id ON group_requests(user_id);
 CREATE INDEX idx_group_requests_group_id ON group_requests(group_id);
 

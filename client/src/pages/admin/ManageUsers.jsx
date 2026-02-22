@@ -204,6 +204,9 @@ export default function ManageUsers() {
                   <th>Name</th>
                   <th>Email</th>
                   <th>Role</th>
+                  <th>Level</th>
+                  <th>DUPR</th>
+                  <th>Certified</th>
                   <th>Groups</th>
                   <th>Actions</th>
                 </tr>
@@ -218,6 +221,9 @@ export default function ManageUsers() {
                         {user.role}
                       </span>
                     </td>
+                    <td>{user.level_of_play ? user.level_of_play.charAt(0).toUpperCase() + user.level_of_play.slice(1) : <span className="text-muted">—</span>}</td>
+                    <td>{user.dupr_rating != null ? user.dupr_rating : <span className="text-muted">—</span>}</td>
+                    <td>{user.certified_rating ? <span className="badge badge-primary">Yes</span> : <span className="text-muted">No</span>}</td>
                     <td>
                       <div className="user-groups">
                         {user.groups && user.groups.length > 0 ? (

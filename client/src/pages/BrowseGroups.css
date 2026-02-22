@@ -52,6 +52,30 @@
   line-height: 1.5;
 }
 
+.group-locations {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.group-location-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.location-name {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.location-address {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
 .group-card-footer {
   display: flex;
   justify-content: space-between;

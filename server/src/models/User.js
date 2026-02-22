@@ -26,19 +26,19 @@ const User = {
 
   async findById(id) {
     const result = await pool.query(
-      'SELECT id, email, name, phone, role, created_at, updated_at FROM users WHERE id = $1',
+      'SELECT id, email, name, phone, role, level_of_play, dupr_rating, certified_rating, created_at, updated_at FROM users WHERE id = $1',
       [id]
     );
     return result.rows[0];
   },
 
-  async updateProfile(id, { name, email, phone }) {
+  async updateProfile(id, { name, email, phone, level_of_play, dupr_rating, certified_rating }) {
     const result = await pool.query(
       `UPDATE users
-       SET name = $1, email = $2, phone = $3, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $4
-       RETURNING id, email, name, phone, role, created_at, updated_at`,
-      [name, email, phone || null, id]
+       SET name = $1, email = $2, phone = $3, level_of_play = $4, dupr_rating = $5, certified_rating = $6, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $7
+       RETURNING id, email, name, phone, role, level_of_play, dupr_rating, certified_rating, created_at, updated_at`,
+      [name, email, phone || null, level_of_play || null, dupr_rating || null, certified_rating || false, id]
     );
     return result.rows[0];
   },
@@ -54,7 +54,7 @@ const User = {
 
   async findAll() {
     const result = await pool.query(
-      `SELECT id, email, name, role, created_at, updated_at
+      `SELECT id, email, name, role, level_of_play, dupr_rating, certified_rating, created_at, updated_at
        FROM users
        WHERE role != 'pending'
        ORDER BY name`

@@ -46,6 +46,17 @@ if (USE_SQLITE) {
         ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT
       `).catch(() => {});
 
+      // Add player profile columns (migration for existing databases)
+      await pool.query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS level_of_play TEXT
+      `).catch(() => {});
+      await pool.query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS dupr_rating NUMERIC(3,1)
+      `).catch(() => {});
+      await pool.query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS certified_rating BOOLEAN DEFAULT false
+      `).catch(() => {});
+
       await pool.query(`
         CREATE TABLE IF NOT EXISTS groups (
           id SERIAL PRIMARY KEY,
@@ -108,6 +119,14 @@ if (USE_SQLITE) {
       `).catch(() => {});
 
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS group_locations (
+          group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
+          location_id INTEGER REFERENCES locations(id) ON DELETE CASCADE,
+          PRIMARY KEY (group_id, location_id)
+        )
+      `);
+
+      await pool.query(`
         CREATE TABLE IF NOT EXISTS group_requests (
           id SERIAL PRIMARY KEY,
           user_id INTEGER REFERENCES users(id) ON DELETE CASCADE NOT NULL,
@@ -124,6 +143,8 @@ if (USE_SQLITE) {
       await pool.query('CREATE INDEX IF NOT EXISTS idx_events_event_date ON events(event_date)');
       await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_event_id ON reservations(event_id)');
       await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id)');
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_group_locations_group_id ON group_locations(group_id)');
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_group_locations_location_id ON group_locations(location_id)');
       await pool.query('CREATE INDEX IF NOT EXISTS idx_group_requests_user_id ON group_requests(user_id)');
       await pool.query('CREATE INDEX IF NOT EXISTS idx_group_requests_group_id ON group_requests(group_id)');
 

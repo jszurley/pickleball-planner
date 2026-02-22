@@ -214,7 +214,10 @@ router.get('/me', authAllowPending, async (req, res) => {
         email: user.email,
         name: user.name,
         phone: user.phone || '',
-        role: user.role
+        role: user.role,
+        level_of_play: user.level_of_play || '',
+        dupr_rating: user.dupr_rating || null,
+        certified_rating: !!user.certified_rating
       },
       groups
     });
@@ -238,6 +241,9 @@ router.get('/profile', auth, async (req, res) => {
       name: user.name,
       phone: user.phone || '',
       role: user.role,
+      level_of_play: user.level_of_play || '',
+      dupr_rating: user.dupr_rating || null,
+      certified_rating: !!user.certified_rating,
       created_at: user.created_at
     });
   } catch (error) {
@@ -249,7 +255,7 @@ router.get('/profile', auth, async (req, res) => {
 // Update user profile
 router.put('/profile', auth, async (req, res) => {
   try {
-    const { name, email, phone } = req.body;
+    const { name, email, phone, level_of_play, dupr_rating, certified_rating } = req.body;
 
     if (!name || !email) {
       return res.status(400).json({ error: 'Name and email are required' });
@@ -263,7 +269,7 @@ router.put('/profile', auth, async (req, res) => {
       }
     }
 
-    const updatedUser = await User.updateProfile(req.user.id, { name, email, phone });
+    const updatedUser = await User.updateProfile(req.user.id, { name, email, phone, level_of_play, dupr_rating, certified_rating });
 
     res.json({
       message: 'Profile updated successfully',
@@ -272,7 +278,10 @@ router.put('/profile', auth, async (req, res) => {
         email: updatedUser.email,
         name: updatedUser.name,
         phone: updatedUser.phone || '',
-        role: updatedUser.role
+        role: updatedUser.role,
+        level_of_play: updatedUser.level_of_play || '',
+        dupr_rating: updatedUser.dupr_rating || null,
+        certified_rating: !!updatedUser.certified_rating
       }
     });
   } catch (error) {

@@ -27,9 +27,23 @@ router.get('/browse', authAllowPending, async (req, res) => {
       memberCounts[r.group_id] = parseInt(r.member_count);
     });
 
+    // Get locations for all groups
+    const locResult = await pool.query(
+      `SELECT gl.group_id, l.id, l.name, l.address
+       FROM group_locations gl
+       INNER JOIN locations l ON l.id = gl.location_id
+       ORDER BY l.name`
+    );
+    const groupLocations = {};
+    locResult.rows.forEach(r => {
+      if (!groupLocations[r.group_id]) groupLocations[r.group_id] = [];
+      groupLocations[r.group_id].push({ id: r.id, name: r.name, address: r.address });
+    });
+
     const result = groups.map(g => ({
       ...g,
       member_count: memberCounts[g.id] || 0,
+      locations: groupLocations[g.id] || [],
       is_member: userGroupIds.includes(g.id),
       has_requested: requestedGroupIds.includes(g.id)
     }));
@@ -94,7 +108,15 @@ router.get('/', auth, async (req, res) => {
       groups = await Group.findByUser(req.user.id);
     }
 
-    res.json(groups);
+    // Attach locations to each group
+    const groupsWithLocations = await Promise.all(
+      groups.map(async (g) => {
+        const locations = await Group.getLocations(g.id);
+        return { ...g, locations };
+      })
+    );
+
+    res.json(groupsWithLocations);
   } catch (error) {
     console.error('Get groups error:', error);
     res.status(500).json({ error: 'Failed to get groups' });
@@ -121,8 +143,9 @@ router.get('/:id', auth, async (req, res) => {
     }
 
     const members = await Group.getMembers(id);
+    const locations = await Group.getLocations(id);
 
-    res.json({ ...group, members });
+    res.json({ ...group, members, locations });
   } catch (error) {
     console.error('Get group error:', error);
     res.status(500).json({ error: 'Failed to get group' });
@@ -132,7 +155,7 @@ router.get('/:id', auth, async (req, res) => {
 // Create group (admin only)
 router.post('/', auth, adminOnly, async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, locationIds } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Group name is required' });
@@ -140,7 +163,12 @@ router.post('/', auth, adminOnly, async (req, res) => {
 
     const group = await Group.create(name, description);
 
-    res.status(201).json(group);
+    if (locationIds && locationIds.length > 0) {
+      await Group.setLocations(group.id, locationIds);
+    }
+
+    const locations = await Group.getLocations(group.id);
+    res.status(201).json({ ...group, locations });
   } catch (error) {
     console.error('Create group error:', error);
     res.status(500).json({ error: 'Failed to create group' });
@@ -151,7 +179,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
 router.put('/:id', auth, adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description } = req.body;
+    const { name, description, locationIds } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Group name is required' });
@@ -164,7 +192,12 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
 
     const updatedGroup = await Group.update(id, name, description);
 
-    res.json(updatedGroup);
+    if (locationIds !== undefined) {
+      await Group.setLocations(id, locationIds);
+    }
+
+    const locations = await Group.getLocations(id);
+    res.json({ ...updatedGroup, locations });
   } catch (error) {
     console.error('Update group error:', error);
     res.status(500).json({ error: 'Failed to update group' });

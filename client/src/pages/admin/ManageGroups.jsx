@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getGroups, createGroup, updateGroup, deleteGroup, getGroup } from '../../services/api';
+import { getGroups, createGroup, updateGroup, deleteGroup, getGroup, getLocations } from '../../services/api';
 import './Admin.css';
 
 export default function ManageGroups() {
@@ -9,11 +9,13 @@ export default function ManageGroups() {
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', description: '', locationIds: [] });
   const [viewingGroup, setViewingGroup] = useState(null);
+  const [locations, setLocations] = useState([]);
 
   useEffect(() => {
     loadGroups();
+    loadLocations();
   }, []);
 
   const loadGroups = async () => {
@@ -27,13 +29,26 @@ export default function ManageGroups() {
     }
   };
 
+  const loadLocations = async () => {
+    try {
+      const response = await getLocations();
+      setLocations(response.data);
+    } catch (err) {
+      // Locations are optional, don't block on failure
+    }
+  };
+
   const handleOpenModal = (group = null) => {
     if (group) {
       setEditingGroup(group);
-      setFormData({ name: group.name, description: group.description || '' });
+      setFormData({
+        name: group.name,
+        description: group.description || '',
+        locationIds: (group.locations || []).map(l => l.id)
+      });
     } else {
       setEditingGroup(null);
-      setFormData({ name: '', description: '' });
+      setFormData({ name: '', description: '', locationIds: [] });
     }
     setShowModal(true);
   };
@@ -41,7 +56,7 @@ export default function ManageGroups() {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingGroup(null);
-    setFormData({ name: '', description: '' });
+    setFormData({ name: '', description: '', locationIds: [] });
   };
 
   const handleSubmit = async (e) => {
@@ -122,6 +137,13 @@ export default function ManageGroups() {
                 {group.description && (
                   <p className="text-muted">{group.description}</p>
                 )}
+                {group.locations && group.locations.length > 0 && (
+                  <div className="group-locations-list">
+                    {group.locations.map(loc => (
+                      <span key={loc.id} className="badge badge-outline">{loc.name}</span>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-1 mt-2">
                   <button
                     className="btn btn-outline btn-sm"
@@ -180,6 +202,29 @@ export default function ManageGroups() {
                   rows={3}
                 />
               </div>
+
+              {locations.length > 0 && (
+                <div className="form-group">
+                  <label>Locations</label>
+                  <div className="checkbox-group">
+                    {locations.map((loc) => (
+                      <label key={loc.id} className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={formData.locationIds.includes(loc.id)}
+                          onChange={(e) => {
+                            const ids = e.target.checked
+                              ? [...formData.locationIds, loc.id]
+                              : formData.locationIds.filter(id => id !== loc.id);
+                            setFormData({ ...formData, locationIds: ids });
+                          }}
+                        />
+                        {loc.name}{loc.address ? ` — ${loc.address}` : ''}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="modal-footer">
                 <button type="button" className="btn btn-outline" onClick={handleCloseModal}>

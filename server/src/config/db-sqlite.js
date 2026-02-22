@@ -60,6 +60,23 @@ function initSchema() {
     // Column may already exist
   }
 
+  // Add player profile columns (migration for existing databases)
+  try {
+    db.run('ALTER TABLE users ADD COLUMN level_of_play TEXT');
+  } catch (e) {
+    // Column may already exist
+  }
+  try {
+    db.run('ALTER TABLE users ADD COLUMN dupr_rating REAL');
+  } catch (e) {
+    // Column may already exist
+  }
+  try {
+    db.run('ALTER TABLE users ADD COLUMN certified_rating INTEGER DEFAULT 0');
+  } catch (e) {
+    // Column may already exist
+  }
+
   db.run(`
     CREATE TABLE IF NOT EXISTS groups (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -124,6 +141,14 @@ function initSchema() {
   }
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS group_locations (
+      group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
+      location_id INTEGER REFERENCES locations(id) ON DELETE CASCADE,
+      PRIMARY KEY (group_id, location_id)
+    )
+  `);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS group_requests (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE NOT NULL,
@@ -142,6 +167,8 @@ function initSchema() {
   db.run('CREATE INDEX IF NOT EXISTS idx_events_event_date ON events(event_date)');
   db.run('CREATE INDEX IF NOT EXISTS idx_reservations_event_id ON reservations(event_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_group_locations_group_id ON group_locations(group_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_group_locations_location_id ON group_locations(location_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_group_requests_user_id ON group_requests(user_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_group_requests_group_id ON group_requests(group_id)');
 

@@ -15,7 +15,10 @@ export default function Profile() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: ''
+    phone: '',
+    level_of_play: '',
+    dupr_rating: '',
+    certified_rating: false
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -37,7 +40,10 @@ export default function Profile() {
       setFormData({
         name: response.data.name || '',
         email: response.data.email || '',
-        phone: response.data.phone || ''
+        phone: response.data.phone || '',
+        level_of_play: response.data.level_of_play || '',
+        dupr_rating: response.data.dupr_rating ?? '',
+        certified_rating: !!response.data.certified_rating
       });
     } catch (err) {
       setError('Failed to load profile');
@@ -47,8 +53,8 @@ export default function Profile() {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handlePasswordChange = (e) => {
@@ -170,6 +176,48 @@ export default function Profile() {
               onChange={handleChange}
               placeholder="(555) 123-4567"
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="level_of_play">Level of Play</label>
+            <select
+              id="level_of_play"
+              name="level_of_play"
+              value={formData.level_of_play}
+              onChange={handleChange}
+            >
+              <option value="">-- Select --</option>
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="expert">Expert</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="dupr_rating">DUPR Rating</label>
+            <input
+              type="number"
+              id="dupr_rating"
+              name="dupr_rating"
+              value={formData.dupr_rating}
+              onChange={handleChange}
+              step="0.1"
+              min="0"
+              max="8"
+              placeholder="e.g. 3.5"
+            />
+          </div>
+
+          <div className="form-group checkbox-group">
+            <label>
+              <input
+                type="checkbox"
+                name="certified_rating"
+                checked={formData.certified_rating}
+                onChange={handleChange}
+              />
+              Certified Rating
+            </label>
           </div>
 
           <div className="form-actions">

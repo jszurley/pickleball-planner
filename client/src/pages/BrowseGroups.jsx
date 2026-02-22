@@ -87,6 +87,17 @@ export default function BrowseGroups() {
                 <p className="group-description">{group.description}</p>
               )}
 
+              {group.locations && group.locations.length > 0 && (
+                <div className="group-locations">
+                  {group.locations.map(loc => (
+                    <div key={loc.id} className="group-location-item">
+                      <span className="location-name">{loc.name}</span>
+                      {loc.address && <span className="location-address">{loc.address}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="group-card-footer">
                 <span className="member-count">
                   {group.member_count} member{group.member_count !== 1 ? 's' : ''}
