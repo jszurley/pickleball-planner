@@ -1,5 +1,6 @@
 const express = require('express');
 const User = require('../models/User');
+const GroupRequest = require('../models/GroupRequest');
 const auth = require('../middleware/auth');
 const adminOnly = require('../middleware/adminOnly');
 
@@ -9,7 +10,16 @@ const router = express.Router();
 router.get('/pending', auth, adminOnly, async (req, res) => {
   try {
     const users = await User.findPending();
-    res.json(users);
+
+    // Include requested group IDs for each pending user
+    const usersWithRequests = await Promise.all(
+      users.map(async (user) => {
+        const requestedGroupIds = await GroupRequest.findRequestedGroupIds(user.id);
+        return { ...user, requested_groups: requestedGroupIds };
+      })
+    );
+
+    res.json(usersWithRequests);
   } catch (error) {
     console.error('Get pending users error:', error);
     res.status(500).json({ error: 'Failed to get pending users' });
@@ -36,6 +46,9 @@ router.post('/:id/approve', auth, adminOnly, async (req, res) => {
     if (groupIds && groupIds.length > 0) {
       await User.setGroups(id, groupIds);
     }
+
+    // Clean up any group requests for this user
+    await GroupRequest.deleteAllForUser(id);
 
     const updatedUser = await User.findById(id);
     const groups = await User.getGroups(id);

@@ -16,6 +16,7 @@ import ManageUsers from './pages/admin/ManageUsers';
 import ManageGroups from './pages/admin/ManageGroups';
 import ManageLocations from './pages/admin/ManageLocations';
 import ManageEvents from './pages/admin/ManageEvents';
+import BrowseGroups from './pages/BrowseGroups';
 
 function App() {
   const { user, loading } = useAuth();
@@ -48,6 +49,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/groups/browse"
+            element={
+              <ProtectedRoute allowPending>
+                <BrowseGroups />
               </ProtectedRoute>
             }
           />

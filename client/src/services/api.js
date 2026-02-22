@@ -48,6 +48,9 @@ export const updateUserGroups = (id, groupIds) => api.put(`/users/${id}/groups`,
 export const deleteUser = (id) => api.delete(`/users/${id}`);
 
 // Groups
+export const browseGroups = () => api.get('/groups/browse');
+export const requestGroup = (groupId) => api.post(`/groups/${groupId}/request`);
+export const cancelGroupRequest = (groupId) => api.delete(`/groups/${groupId}/request`);
 export const getGroups = () => api.get('/groups');
 export const getGroup = (id) => api.get(`/groups/${id}`);
 export const createGroup = (data) => api.post('/groups', data);

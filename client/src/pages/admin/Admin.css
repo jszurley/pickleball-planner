@@ -160,6 +160,16 @@
   cursor: pointer;
 }
 
+.requested-badge {
+  font-size: 0.7rem;
+  background: #fff3cd;
+  color: #856404;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  margin-left: 0.25rem;
+  font-weight: 600;
+}
+
 /* User management table */
 .users-table {
   background: var(--surface);

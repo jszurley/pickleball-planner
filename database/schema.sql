@@ -70,6 +70,15 @@ CREATE TABLE reservations (
     UNIQUE (event_id, user_id)
 );
 
+-- Group join requests table
+CREATE TABLE group_requests (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+    group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, group_id)
+);
+
 -- Create indexes for common queries
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_role ON users(role);
@@ -79,6 +88,8 @@ CREATE INDEX idx_events_group_id ON events(group_id);
 CREATE INDEX idx_events_event_date ON events(event_date);
 CREATE INDEX idx_reservations_event_id ON reservations(event_id);
 CREATE INDEX idx_reservations_user_id ON reservations(user_id);
+CREATE INDEX idx_group_requests_user_id ON group_requests(user_id);
+CREATE INDEX idx_group_requests_group_id ON group_requests(group_id);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

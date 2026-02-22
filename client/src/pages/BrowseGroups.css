@@ -1,0 +1,73 @@
+.browse-groups-page {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.browse-groups-page .page-header {
+  margin-bottom: 1.5rem;
+}
+
+.alert-info {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.groups-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.group-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.group-card.member {
+  border-color: var(--primary);
+  border-left-width: 3px;
+}
+
+.group-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.group-card-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.group-description {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.group-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.member-count {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.group-status-text {
+  font-size: 0.85rem;
+  color: var(--primary);
+  font-weight: 600;
+}

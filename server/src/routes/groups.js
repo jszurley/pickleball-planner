@@ -1,9 +1,87 @@
 const express = require('express');
 const Group = require('../models/Group');
+const GroupRequest = require('../models/GroupRequest');
 const auth = require('../middleware/auth');
+const { authAllowPending } = require('../middleware/auth');
 const adminOnly = require('../middleware/adminOnly');
 
 const router = express.Router();
+
+// Browse all groups (accessible to all authenticated users including pending)
+router.get('/browse', authAllowPending, async (req, res) => {
+  try {
+    const groups = await Group.findAll();
+    const userGroups = await Group.findByUser(req.user.id);
+    const userGroupIds = userGroups.map(g => g.id);
+    const requestedGroupIds = await GroupRequest.findRequestedGroupIds(req.user.id);
+
+    // Get member counts for all groups
+    const pool = require('../config/db');
+    const countResult = await pool.query(
+      `SELECT group_id, COUNT(*) as member_count
+       FROM user_groups
+       GROUP BY group_id`
+    );
+    const memberCounts = {};
+    countResult.rows.forEach(r => {
+      memberCounts[r.group_id] = parseInt(r.member_count);
+    });
+
+    const result = groups.map(g => ({
+      ...g,
+      member_count: memberCounts[g.id] || 0,
+      is_member: userGroupIds.includes(g.id),
+      has_requested: requestedGroupIds.includes(g.id)
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Browse groups error:', error);
+    res.status(500).json({ error: 'Failed to browse groups' });
+  }
+});
+
+// Request to join a group (accessible to all authenticated users including pending)
+router.post('/:id/request', authAllowPending, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const group = await Group.findById(id);
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+
+    // Check if already a member
+    const userGroups = await Group.findByUser(req.user.id);
+    if (userGroups.some(g => g.id === parseInt(id))) {
+      return res.status(400).json({ error: 'You are already a member of this group' });
+    }
+
+    await GroupRequest.create(req.user.id, id);
+
+    res.status(201).json({ message: 'Request submitted' });
+  } catch (error) {
+    console.error('Request group error:', error);
+    res.status(500).json({ error: 'Failed to request group' });
+  }
+});
+
+// Cancel a group request (accessible to all authenticated users including pending)
+router.delete('/:id/request', authAllowPending, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await GroupRequest.delete(req.user.id, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    res.json({ message: 'Request cancelled' });
+  } catch (error) {
+    console.error('Cancel group request error:', error);
+    res.status(500).json({ error: 'Failed to cancel request' });
+  }
+});
 
 // List groups - members see only their groups, admins see all
 router.get('/', auth, async (req, res) => {

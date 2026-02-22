@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { authAllowPending } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -93,10 +94,6 @@ router.post('/login', async (req, res) => {
     const isValid = await User.comparePassword(password, user.password_hash);
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    if (user.role === 'pending') {
-      return res.status(403).json({ error: 'Your account is pending approval' });
     }
 
     const token = jwt.sign(
@@ -206,7 +203,7 @@ router.post('/setup-admin', async (req, res) => {
 });
 
 // Get current user info with groups
-router.get('/me', auth, async (req, res) => {
+router.get('/me', authAllowPending, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     const groups = await User.getGroups(req.user.id);

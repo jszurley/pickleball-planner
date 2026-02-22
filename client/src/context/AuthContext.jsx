@@ -46,12 +46,14 @@ export function AuthProvider({ children }) {
   };
 
   const isAdmin = user?.role === 'admin';
+  const isPending = user?.role === 'pending';
 
   const value = {
     user,
     groups,
     loading,
     isAdmin,
+    isPending,
     loginUser,
     logout,
     refreshUser: loadUser

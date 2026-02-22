@@ -107,6 +107,16 @@ if (USE_SQLITE) {
         ALTER TABLE reservations ADD COLUMN IF NOT EXISTS guest_count INTEGER NOT NULL DEFAULT 0
       `).catch(() => {});
 
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS group_requests (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+          group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE (user_id, group_id)
+        )
+      `);
+
       // Create indexes
       await pool.query('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
       await pool.query('CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)');
@@ -114,6 +124,8 @@ if (USE_SQLITE) {
       await pool.query('CREATE INDEX IF NOT EXISTS idx_events_event_date ON events(event_date)');
       await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_event_id ON reservations(event_id)');
       await pool.query('CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id)');
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_group_requests_user_id ON group_requests(user_id)');
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_group_requests_group_id ON group_requests(group_id)');
 
       console.log('PostgreSQL schema initialized');
     } catch (err) {

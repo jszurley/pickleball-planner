@@ -36,10 +36,10 @@ export default function ManageUsers() {
       setMembers(usersRes.data);
       setGroups(groupsRes.data);
 
-      // Initialize selected groups for pending users
+      // Initialize selected groups for pending users (pre-select their requested groups)
       const initialSelected = {};
       pendingRes.data.forEach((user) => {
-        initialSelected[user.id] = [];
+        initialSelected[user.id] = user.requested_groups || [];
       });
       setSelectedGroups(initialSelected);
     } catch (err) {
@@ -158,6 +158,9 @@ export default function ManageUsers() {
                           onChange={() => handleGroupToggle(user.id, group.id)}
                         />
                         {group.name}
+                        {(user.requested_groups || []).includes(group.id) && (
+                          <span className="requested-badge">requested</span>
+                        )}
                       </label>
                     ))}
                   </div>

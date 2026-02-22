@@ -123,6 +123,16 @@ function initSchema() {
     // Column may already exist
   }
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS group_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+      group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE (user_id, group_id)
+    )
+  `);
+
   // Create indexes
   db.run('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
   db.run('CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)');
@@ -132,6 +142,8 @@ function initSchema() {
   db.run('CREATE INDEX IF NOT EXISTS idx_events_event_date ON events(event_date)');
   db.run('CREATE INDEX IF NOT EXISTS idx_reservations_event_id ON reservations(event_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_group_requests_user_id ON group_requests(user_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_group_requests_group_id ON group_requests(group_id)');
 
   saveDB();
 }
