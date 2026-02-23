@@ -42,6 +42,29 @@ const GroupRequest = {
 
   async deleteAllForUser(userId) {
     await pool.query('DELETE FROM group_requests WHERE user_id = $1', [userId]);
+  },
+
+  async findByGroup(groupId) {
+    const result = await pool.query(
+      `SELECT gr.*, u.name as user_name, u.email as user_email
+       FROM group_requests gr
+       INNER JOIN users u ON gr.user_id = u.id
+       WHERE gr.group_id = $1 AND u.role != 'pending'
+       ORDER BY gr.created_at`,
+      [groupId]
+    );
+    return result.rows;
+  },
+
+  async countByGroup() {
+    const result = await pool.query(
+      `SELECT gr.group_id, COUNT(*)::int as request_count
+       FROM group_requests gr
+       INNER JOIN users u ON gr.user_id = u.id
+       WHERE u.role != 'pending'
+       GROUP BY gr.group_id`
+    );
+    return result.rows;
   }
 };
 

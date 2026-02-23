@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getGroups, createGroup, updateGroup, deleteGroup, getGroup, getLocations } from '../../services/api';
+import { getGroups, createGroup, updateGroup, deleteGroup, getGroup, getLocations, getGroupRequests, approveGroupRequest, rejectGroupRequest } from '../../services/api';
 import './Admin.css';
 
 export default function ManageGroups() {
@@ -11,6 +11,7 @@ export default function ManageGroups() {
   const [editingGroup, setEditingGroup] = useState(null);
   const [formData, setFormData] = useState({ name: '', description: '', locationIds: [] });
   const [viewingGroup, setViewingGroup] = useState(null);
+  const [groupRequests, setGroupRequests] = useState([]);
   const [locations, setLocations] = useState([]);
 
   useEffect(() => {
@@ -91,10 +92,34 @@ export default function ManageGroups() {
 
   const handleViewGroup = async (groupId) => {
     try {
-      const response = await getGroup(groupId);
-      setViewingGroup(response.data);
+      const [groupRes, requestsRes] = await Promise.all([
+        getGroup(groupId),
+        getGroupRequests(groupId)
+      ]);
+      setViewingGroup(groupRes.data);
+      setGroupRequests(requestsRes.data);
     } catch (err) {
       setError('Failed to load group details');
+    }
+  };
+
+  const handleApproveRequest = async (groupId, userId) => {
+    try {
+      await approveGroupRequest(groupId, userId);
+      await handleViewGroup(groupId);
+      loadGroups();
+    } catch (err) {
+      setError('Failed to approve request');
+    }
+  };
+
+  const handleRejectRequest = async (groupId, userId) => {
+    try {
+      await rejectGroupRequest(groupId, userId);
+      await handleViewGroup(groupId);
+      loadGroups();
+    } catch (err) {
+      setError('Failed to reject request');
     }
   };
 
@@ -133,7 +158,14 @@ export default function ManageGroups() {
           <div className="grid grid-2">
             {groups.map((group) => (
               <div key={group.id} className="card">
-                <h3>{group.name}</h3>
+                <h3>
+                  {group.name}
+                  {group.request_count > 0 && (
+                    <span className="badge badge-warning" style={{ marginLeft: '0.5rem' }}>
+                      {group.request_count} request{group.request_count !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </h3>
                 {group.description && (
                   <p className="text-muted">{group.description}</p>
                 )}
@@ -241,15 +273,46 @@ export default function ManageGroups() {
 
       {/* View Members Modal */}
       {viewingGroup && (
-        <div className="modal-overlay" onClick={() => setViewingGroup(null)}>
+        <div className="modal-overlay" onClick={() => { setViewingGroup(null); setGroupRequests([]); }}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{viewingGroup.name} Members</h2>
-              <button className="modal-close" onClick={() => setViewingGroup(null)}>
+              <button className="modal-close" onClick={() => { setViewingGroup(null); setGroupRequests([]); }}>
                 &times;
               </button>
             </div>
 
+            {groupRequests.length > 0 && (
+              <div style={{ marginBottom: '1rem' }}>
+                <h3>Join Requests ({groupRequests.length})</h3>
+                <div className="pending-users">
+                  {groupRequests.map((request) => (
+                    <div key={request.id} className="pending-user-card">
+                      <div className="pending-user-info">
+                        <h3>{request.user_name}</h3>
+                        <p>{request.user_email}</p>
+                      </div>
+                      <div className="pending-user-actions">
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => handleApproveRequest(viewingGroup.id, request.user_id)}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => handleRejectRequest(viewingGroup.id, request.user_id)}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <h3>Members</h3>
             {viewingGroup.members && viewingGroup.members.length > 0 ? (
               <ul className="attendees-list" style={{ paddingLeft: '1.5rem' }}>
                 {viewingGroup.members.map((member) => (
@@ -268,7 +331,7 @@ export default function ManageGroups() {
             )}
 
             <div className="modal-footer">
-              <button className="btn btn-outline" onClick={() => setViewingGroup(null)}>
+              <button className="btn btn-outline" onClick={() => { setViewingGroup(null); setGroupRequests([]); }}>
                 Close
               </button>
             </div>

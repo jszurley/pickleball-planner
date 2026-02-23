@@ -97,6 +97,46 @@ router.delete('/:id/request', authAllowPending, async (req, res) => {
   }
 });
 
+// Get group join requests (admin only)
+router.get('/:id/requests', auth, adminOnly, async (req, res) => {
+  try {
+    const requests = await GroupRequest.findByGroup(req.params.id);
+    res.json(requests);
+  } catch (error) {
+    console.error('Get group requests error:', error);
+    res.status(500).json({ error: 'Failed to get group requests' });
+  }
+});
+
+// Approve group join request (admin only)
+router.post('/:id/requests/:userId/approve', auth, adminOnly, async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+    const pool = require('../config/db');
+    await pool.query(
+      `INSERT INTO user_groups (user_id, group_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [userId, id]
+    );
+    await GroupRequest.delete(userId, id);
+    res.json({ message: 'Request approved' });
+  } catch (error) {
+    console.error('Approve group request error:', error);
+    res.status(500).json({ error: 'Failed to approve request' });
+  }
+});
+
+// Reject group join request (admin only)
+router.post('/:id/requests/:userId/reject', auth, adminOnly, async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+    await GroupRequest.delete(userId, id);
+    res.json({ message: 'Request rejected' });
+  } catch (error) {
+    console.error('Reject group request error:', error);
+    res.status(500).json({ error: 'Failed to reject request' });
+  }
+});
+
 // List groups - members see only their groups, admins see all
 router.get('/', auth, async (req, res) => {
   try {
@@ -115,6 +155,16 @@ router.get('/', auth, async (req, res) => {
         return { ...g, locations };
       })
     );
+
+    // For admins, attach request counts
+    if (req.user.role === 'admin') {
+      const counts = await GroupRequest.countByGroup();
+      const countMap = {};
+      counts.forEach(c => { countMap[c.group_id] = c.request_count; });
+      groupsWithLocations.forEach(g => {
+        g.request_count = countMap[g.id] || 0;
+      });
+    }
 
     res.json(groupsWithLocations);
   } catch (error) {
