@@ -1,9 +1,11 @@
 const express = require('express');
 const Group = require('../models/Group');
 const GroupRequest = require('../models/GroupRequest');
+const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { authAllowPending } = require('../middleware/auth');
 const adminOnly = require('../middleware/adminOnly');
+const notifications = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -73,6 +75,10 @@ router.post('/:id/request', authAllowPending, async (req, res) => {
 
     await GroupRequest.create(req.user.id, id);
 
+    // Notify admins of group join request (fire-and-forget)
+    const requestingUser = await User.findById(req.user.id);
+    notifications.notifyGroupRequestSubmitted(requestingUser, group).catch(() => {});
+
     res.status(201).json({ message: 'Request submitted' });
   } catch (error) {
     console.error('Request group error:', error);
@@ -118,6 +124,14 @@ router.post('/:id/requests/:userId/approve', auth, adminOnly, async (req, res) =
       [userId, id]
     );
     await GroupRequest.delete(userId, id);
+
+    // Notify user their group request was approved (fire-and-forget)
+    const approvedUser = await User.findById(userId);
+    const group = await Group.findById(id);
+    if (approvedUser && group) {
+      notifications.notifyGroupRequestApproved(approvedUser, group).catch(() => {});
+    }
+
     res.json({ message: 'Request approved' });
   } catch (error) {
     console.error('Approve group request error:', error);
@@ -129,6 +143,14 @@ router.post('/:id/requests/:userId/approve', auth, adminOnly, async (req, res) =
 router.post('/:id/requests/:userId/reject', auth, adminOnly, async (req, res) => {
   try {
     const { id, userId } = req.params;
+
+    // Notify user before deleting the request (fire-and-forget)
+    const rejectedUser = await User.findById(userId);
+    const group = await Group.findById(id);
+    if (rejectedUser && group) {
+      notifications.notifyGroupRequestRejected(rejectedUser, group).catch(() => {});
+    }
+
     await GroupRequest.delete(userId, id);
     res.json({ message: 'Request rejected' });
   } catch (error) {

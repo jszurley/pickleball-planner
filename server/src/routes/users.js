@@ -3,6 +3,7 @@ const User = require('../models/User');
 const GroupRequest = require('../models/GroupRequest');
 const auth = require('../middleware/auth');
 const adminOnly = require('../middleware/adminOnly');
+const notifications = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -53,6 +54,9 @@ router.post('/:id/approve', auth, adminOnly, async (req, res) => {
     const updatedUser = await User.findById(id);
     const groups = await User.getGroups(id);
 
+    // Notify user they've been approved (fire-and-forget)
+    notifications.notifyUserApproved(updatedUser, groups).catch(() => {});
+
     res.json({
       message: 'User approved successfully',
       user: updatedUser,
@@ -77,6 +81,9 @@ router.post('/:id/reject', auth, adminOnly, async (req, res) => {
     if (user.role !== 'pending') {
       return res.status(400).json({ error: 'User is not pending approval' });
     }
+
+    // Notify user before deleting (fire-and-forget)
+    notifications.notifyUserRejected(user).catch(() => {});
 
     await User.delete(id);
 

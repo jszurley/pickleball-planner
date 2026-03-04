@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { authAllowPending } = require('../middleware/auth');
+const notifications = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -61,6 +62,9 @@ router.post('/register', async (req, res) => {
     }
 
     const user = await User.create(email.toLowerCase(), password, sanitizedName);
+
+    // Notify admins of new registration (fire-and-forget)
+    notifications.notifyNewRegistration(user).catch(() => {});
 
     res.status(201).json({
       message: 'Registration submitted. Please wait for admin approval.',
@@ -315,6 +319,9 @@ router.put('/profile/password', auth, async (req, res) => {
     }
 
     await User.updatePassword(req.user.id, newPassword);
+
+    // Notify user of password change (fire-and-forget)
+    notifications.notifyPasswordChanged(user).catch(() => {});
 
     console.log(`Password changed for user: ${req.user.id}`);
     res.json({ message: 'Password changed successfully' });

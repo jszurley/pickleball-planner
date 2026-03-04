@@ -30,6 +30,7 @@ No test framework or linter is configured.
 PORT=3001
 DATABASE_URL=postgresql://postgres:password@localhost:5432/pickleball
 JWT_SECRET=<secret>
+BREVO_API_KEY=<brevo-api-key>
 ```
 
 ## Architecture
@@ -40,6 +41,8 @@ Full-stack pickleball group play planning app with JWT auth, admin approval work
 - **server/src/config/db.js** — PostgreSQL pool with auto-initialization; falls back to SQLite via `db-sqlite.js`
 - **server/src/middleware/** — `auth.js` (JWT verification), `adminOnly.js` (role check)
 - **server/src/models/** — Direct SQL query functions (User, Group, Location, Event, Reservation) — no ORM
+- **server/src/config/brevo.js** — Brevo email client initialization
+- **server/src/services/notificationService.js** — Email notifications via Brevo (registration, approval, events, reservations)
 - **server/src/routes/** — REST endpoints: auth, users, groups, locations, events, reservations
 - **client/src/context/AuthContext.jsx** — Global auth state, token management, login/logout
 - **client/src/services/api.js** — Axios instance with JWT interceptor

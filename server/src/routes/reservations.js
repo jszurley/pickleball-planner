@@ -3,6 +3,7 @@ const Reservation = require('../models/Reservation');
 const Event = require('../models/Event');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const notifications = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -39,6 +40,11 @@ router.post('/events/:eventId/reserve', auth, async (req, res) => {
     }
 
     const reservation = await Reservation.create(eventId, req.user.id, guests);
+
+    // Notify user and event creator (fire-and-forget)
+    const reservingUser = await User.findById(req.user.id);
+    const creator = event.creator_id ? await User.findById(event.creator_id) : null;
+    notifications.notifyReservationConfirmed(reservingUser, event, creator).catch(() => {});
 
     res.status(201).json({
       message: 'Reservation successful',
@@ -103,6 +109,11 @@ router.delete('/events/:eventId/reserve', auth, async (req, res) => {
     if (!reservation) {
       return res.status(404).json({ error: 'Reservation not found' });
     }
+
+    // Notify user and event creator (fire-and-forget)
+    const cancellingUser = await User.findById(req.user.id);
+    const creator = event.creator_id ? await User.findById(event.creator_id) : null;
+    notifications.notifyReservationCancelled(cancellingUser, event, creator).catch(() => {});
 
     res.json({ message: 'Reservation cancelled' });
   } catch (error) {

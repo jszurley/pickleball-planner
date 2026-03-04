@@ -1,8 +1,11 @@
 const express = require('express');
 const Event = require('../models/Event');
 const User = require('../models/User');
+const Group = require('../models/Group');
+const Reservation = require('../models/Reservation');
 const auth = require('../middleware/auth');
 const adminOnly = require('../middleware/adminOnly');
+const notifications = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -30,7 +33,6 @@ router.get('/groups/:groupId/events', auth, async (req, res) => {
     // Add is_reserved flag and my_guest_count for each event
     const eventsWithReservationStatus = await Promise.all(
       events.map(async (event) => {
-        const Reservation = require('../models/Reservation');
         const userReservation = await Reservation.findByEventAndUser(event.id, req.user.id);
         return {
           ...event,
@@ -83,6 +85,15 @@ router.post('/groups/:groupId/events', auth, async (req, res) => {
     );
 
     const fullEvent = await Event.findById(event.id);
+
+    // Notify group members of new event (fire-and-forget)
+    const group = await Group.findById(groupId);
+    const members = await Group.getMembers(groupId);
+    const creator = await User.findById(req.user.id);
+    const otherMembers = members.filter(m => m.id !== req.user.id);
+    if (group && otherMembers.length > 0) {
+      notifications.notifyNewEvent(fullEvent, group, otherMembers, creator.name).catch(() => {});
+    }
 
     res.status(201).json(fullEvent);
   } catch (error) {
@@ -143,7 +154,6 @@ router.get('/events/:id', auth, async (req, res) => {
       }
     }
 
-    const Reservation = require('../models/Reservation');
     const userReservation = await Reservation.findByEventAndUser(event.id, req.user.id);
     const reservations = await Reservation.findByEvent(event.id);
 
@@ -200,6 +210,14 @@ router.put('/events/:id', auth, async (req, res) => {
 
     const fullEvent = await Event.findById(updatedEvent.id);
 
+    // Notify reservees of event update (fire-and-forget)
+    const reservees = await Reservation.findByEvent(id);
+    const updater = await User.findById(req.user.id);
+    if (reservees.length > 0) {
+      const reserveeUsers = reservees.map(r => ({ id: r.user_id, email: r.user_email, name: r.user_name }));
+      notifications.notifyEventUpdated(fullEvent, reserveeUsers, updater.name).catch(() => {});
+    }
+
     res.json(fullEvent);
   } catch (error) {
     console.error('Update event error:', error);
@@ -232,6 +250,15 @@ router.post('/events/:id/clone', auth, async (req, res) => {
 
     const clonedEvent = await Event.clone(id, newDate, req.user.id);
     const fullEvent = await Event.findById(clonedEvent.id);
+
+    // Notify group members of cloned event (fire-and-forget)
+    const group = await Group.findById(event.group_id);
+    const members = await Group.getMembers(event.group_id);
+    const creator = await User.findById(req.user.id);
+    const otherMembers = members.filter(m => m.id !== req.user.id);
+    if (group && otherMembers.length > 0) {
+      notifications.notifyNewEvent(fullEvent, group, otherMembers, creator.name).catch(() => {});
+    }
 
     res.status(201).json(fullEvent);
   } catch (error) {
@@ -297,6 +324,18 @@ router.post('/groups/:groupId/events/recurring', auth, async (req, res) => {
       daysOfWeek
     );
 
+    // Notify group members of recurring events (fire-and-forget, use first event as representative)
+    if (events.length > 0) {
+      const group = await Group.findById(groupId);
+      const members = await Group.getMembers(groupId);
+      const creator = await User.findById(req.user.id);
+      const otherMembers = members.filter(m => m.id !== req.user.id);
+      if (group && otherMembers.length > 0) {
+        const firstEvent = await Event.findById(events[0].id);
+        notifications.notifyNewEvent(firstEvent, group, otherMembers, creator.name).catch(() => {});
+      }
+    }
+
     res.status(201).json({ message: `Created ${events.length} events`, count: events.length, events });
   } catch (error) {
     console.error('Create recurring events error:', error);
@@ -317,6 +356,13 @@ router.delete('/events/:id', auth, async (req, res) => {
     // Only creator or admin can delete
     if (event.creator_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Only event creator or admin can delete this event' });
+    }
+
+    // Notify reservees before deleting (fire-and-forget)
+    const reservees = await Reservation.findByEvent(id);
+    if (reservees.length > 0) {
+      const reserveeUsers = reservees.map(r => ({ id: r.user_id, email: r.user_email, name: r.user_name }));
+      notifications.notifyEventDeleted(event, reserveeUsers).catch(() => {});
     }
 
     await Event.delete(id);
