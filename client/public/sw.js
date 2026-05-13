@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pickleball-v4';
+const CACHE_NAME = 'pickleball-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -109,11 +109,23 @@ self.addEventListener('push', (event) => {
   }
 });
 
-// Handle notification click
+// Handle notification click: focus an existing tab if one is open, else open a new one
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data.url;
+  const url = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil(
-    clients.openWindow(url)
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) {
+        try {
+          const winUrl = new URL(w.url);
+          if (winUrl.origin === self.location.origin) {
+            w.focus();
+            if ('navigate' in w) w.navigate(url);
+            return;
+          }
+        } catch (_) { /* ignore */ }
+      }
+      return clients.openWindow(url);
+    })
   );
 });

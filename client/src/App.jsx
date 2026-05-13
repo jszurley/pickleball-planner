@@ -7,6 +7,7 @@ import OfflineIndicator from './components/OfflineIndicator';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import LegacyDashboard from './pages/LegacyDashboard';
 import Profile from './pages/Profile';
 import CalendarView from './pages/CalendarView';
 import GroupEvents from './pages/GroupEvents';
@@ -49,6 +50,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/schedule"
+            element={
+              <ProtectedRoute>
+                <LegacyDashboard />
               </ProtectedRoute>
             }
           />

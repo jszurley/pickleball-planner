@@ -1,6 +1,8 @@
 -- Pickleball Group Play Planning Database Schema
 
 -- Drop tables if they exist (for clean setup)
+DROP TABLE IF EXISTS pulse_responses CASCADE;
+DROP TABLE IF EXISTS pulses CASCADE;
 DROP TABLE IF EXISTS reservations CASCADE;
 DROP TABLE IF EXISTS events CASCADE;
 DROP TABLE IF EXISTS group_locations CASCADE;
@@ -19,6 +21,14 @@ CREATE TABLE users (
     level_of_play VARCHAR(20) CHECK (level_of_play IN ('beginner', 'intermediate', 'expert')),
     dupr_rating NUMERIC(3,1),
     certified_rating BOOLEAN DEFAULT false,
+    default_group_id INTEGER,
+    default_location_id INTEGER,
+    usual_morning_start TIME DEFAULT '08:00',
+    usual_evening_start TIME DEFAULT '18:00',
+    usual_duration_min INTEGER DEFAULT 90,
+    away_start_date DATE,
+    away_end_date DATE,
+    push_subscription JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -28,6 +38,7 @@ CREATE TABLE groups (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
+    min_players INTEGER NOT NULL DEFAULT 4,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -90,6 +101,40 @@ CREATE TABLE group_requests (
     UNIQUE (user_id, group_id)
 );
 
+-- Pulses ("Who's playing?" requests)
+CREATE TABLE pulses (
+    id SERIAL PRIMARY KEY,
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+    pulse_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'closed', 'archived')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    archived_at TIMESTAMPTZ
+);
+
+-- Only one active pulse per group at a time
+CREATE UNIQUE INDEX one_active_pulse_per_group ON pulses (group_id) WHERE status = 'active';
+
+-- Pulse responses (I'm in / I'm out)
+CREATE TABLE pulse_responses (
+    id SERIAL PRIMARY KEY,
+    pulse_id INTEGER NOT NULL REFERENCES pulses(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(8) NOT NULL CHECK (status IN ('in', 'out')),
+    source VARCHAR(12) NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'auto_away')),
+    responded_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (pulse_id, user_id)
+);
+
+-- Foreign keys for user defaults (added after locations/groups exist)
+ALTER TABLE users ADD CONSTRAINT users_default_group_fk
+    FOREIGN KEY (default_group_id) REFERENCES groups(id) ON DELETE SET NULL;
+ALTER TABLE users ADD CONSTRAINT users_default_location_fk
+    FOREIGN KEY (default_location_id) REFERENCES locations(id) ON DELETE SET NULL;
+
 -- Create indexes for common queries
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_role ON users(role);
@@ -103,6 +148,9 @@ CREATE INDEX idx_group_locations_group_id ON group_locations(group_id);
 CREATE INDEX idx_group_locations_location_id ON group_locations(location_id);
 CREATE INDEX idx_group_requests_user_id ON group_requests(user_id);
 CREATE INDEX idx_group_requests_group_id ON group_requests(group_id);
+CREATE INDEX idx_pulses_group_status ON pulses(group_id, status);
+CREATE INDEX idx_pulse_responses_pulse ON pulse_responses(pulse_id);
+CREATE INDEX idx_pulse_responses_user ON pulse_responses(user_id);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

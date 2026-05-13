@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getProfile, updateProfile, changePassword } from '../services/api';
+import { getProfile, updateProfile, changePassword, getLocations, updatePreferences } from '../services/api';
 import './Profile.css';
 
 export default function Profile() {
-  const { user, refreshUser } = useAuth();
+  const { user, groups: userGroups, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -21,6 +21,17 @@ export default function Profile() {
     certified_rating: false
   });
 
+  const [locations, setLocations] = useState([]);
+  const [prefs, setPrefs] = useState({
+    default_group_id: '',
+    default_location_id: '',
+    usual_morning_start: '08:00',
+    usual_evening_start: '18:00',
+    usual_duration_min: 90
+  });
+  const [prefsSaving, setPrefsSaving] = useState(false);
+  const [prefsMsg, setPrefsMsg] = useState('');
+
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -32,7 +43,45 @@ export default function Profile() {
 
   useEffect(() => {
     loadProfile();
+    getLocations().then(r => setLocations(r.data)).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    setPrefs({
+      default_group_id: user.default_group_id || '',
+      default_location_id: user.default_location_id || '',
+      usual_morning_start: (user.usual_morning_start || '08:00').slice(0, 5),
+      usual_evening_start: (user.usual_evening_start || '18:00').slice(0, 5),
+      usual_duration_min: user.usual_duration_min || 90
+    });
+  }, [user]);
+
+  const handlePrefsChange = (e) => {
+    const { name, value } = e.target;
+    setPrefs(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePrefsSubmit = async (e) => {
+    e.preventDefault();
+    setPrefsMsg('');
+    setPrefsSaving(true);
+    try {
+      await updatePreferences({
+        default_group_id: prefs.default_group_id ? parseInt(prefs.default_group_id, 10) : null,
+        default_location_id: prefs.default_location_id ? parseInt(prefs.default_location_id, 10) : null,
+        usual_morning_start: prefs.usual_morning_start || null,
+        usual_evening_start: prefs.usual_evening_start || null,
+        usual_duration_min: prefs.usual_duration_min ? parseInt(prefs.usual_duration_min, 10) : null
+      });
+      setPrefsMsg('Preferences saved!');
+      if (refreshUser) await refreshUser();
+    } catch (err) {
+      setPrefsMsg(err.response?.data?.error || 'Failed to save preferences');
+    } finally {
+      setPrefsSaving(false);
+    }
+  };
 
   const loadProfile = async () => {
     try {
@@ -226,6 +275,88 @@ export default function Profile() {
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Pickleball Preferences */}
+      <div className="profile-card card">
+        <h2>Pickleball Preferences</h2>
+        <p className="text-muted" style={{ marginTop: '-0.5rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
+          Used as smart defaults when you start a "Who's playing?" pulse.
+        </p>
+        {prefsMsg && <div className="alert alert-success">{prefsMsg}</div>}
+        <form onSubmit={handlePrefsSubmit}>
+          <div className="form-group">
+            <label htmlFor="default_group_id">Default group</label>
+            <select
+              id="default_group_id"
+              name="default_group_id"
+              value={prefs.default_group_id}
+              onChange={handlePrefsChange}
+            >
+              <option value="">-- None --</option>
+              {(userGroups || []).map(g => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="default_location_id">Default court</label>
+            <select
+              id="default_location_id"
+              name="default_location_id"
+              value={prefs.default_location_id}
+              onChange={handlePrefsChange}
+            >
+              <option value="">-- None --</option>
+              {locations.map(l => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="usual_morning_start">Usual morning start time</label>
+            <input
+              type="time"
+              id="usual_morning_start"
+              name="usual_morning_start"
+              value={prefs.usual_morning_start}
+              onChange={handlePrefsChange}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="usual_evening_start">Usual evening start time</label>
+            <input
+              type="time"
+              id="usual_evening_start"
+              name="usual_evening_start"
+              value={prefs.usual_evening_start}
+              onChange={handlePrefsChange}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="usual_duration_min">Usual game length (minutes)</label>
+            <input
+              type="number"
+              id="usual_duration_min"
+              name="usual_duration_min"
+              value={prefs.usual_duration_min}
+              onChange={handlePrefsChange}
+              min="30"
+              max="300"
+              step="15"
+            />
+          </div>
+
+          <div className="form-actions">
+            <button type="submit" className="btn btn-primary" disabled={prefsSaving}>
+              {prefsSaving ? 'Saving...' : 'Save preferences'}
             </button>
           </div>
         </form>

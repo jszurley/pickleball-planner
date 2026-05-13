@@ -148,6 +148,49 @@ if (USE_SQLITE) {
       await pool.query('CREATE INDEX IF NOT EXISTS idx_group_requests_user_id ON group_requests(user_id)');
       await pool.query('CREATE INDEX IF NOT EXISTS idx_group_requests_group_id ON group_requests(group_id)');
 
+      // --- Pulse feature: user prefs, away mode, push subscription ---
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS default_group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL`).catch(() => {});
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS default_location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL`).catch(() => {});
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS usual_morning_start TIME DEFAULT '08:00'`).catch(() => {});
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS usual_evening_start TIME DEFAULT '18:00'`).catch(() => {});
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS usual_duration_min INTEGER DEFAULT 90`).catch(() => {});
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS away_start_date DATE`).catch(() => {});
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS away_end_date DATE`).catch(() => {});
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS push_subscription JSONB`).catch(() => {});
+
+      await pool.query(`ALTER TABLE groups ADD COLUMN IF NOT EXISTS min_players INTEGER DEFAULT 4`).catch(() => {});
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS pulses (
+          id SERIAL PRIMARY KEY,
+          group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+          creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+          pulse_date DATE NOT NULL,
+          start_time TIME NOT NULL,
+          end_time TIME NOT NULL,
+          status VARCHAR(16) NOT NULL DEFAULT 'active',
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          archived_at TIMESTAMPTZ
+        )
+      `);
+      await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS one_active_pulse_per_group ON pulses (group_id) WHERE status = 'active'`).catch(() => {});
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_pulses_group_status ON pulses (group_id, status)`).catch(() => {});
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS pulse_responses (
+          id SERIAL PRIMARY KEY,
+          pulse_id INTEGER NOT NULL REFERENCES pulses(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          status VARCHAR(8) NOT NULL,
+          source VARCHAR(12) NOT NULL DEFAULT 'manual',
+          responded_at TIMESTAMPTZ DEFAULT NOW(),
+          UNIQUE (pulse_id, user_id)
+        )
+      `);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_pulse_responses_pulse ON pulse_responses (pulse_id)`).catch(() => {});
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_pulse_responses_user ON pulse_responses (user_id)`).catch(() => {});
+
       console.log('PostgreSQL schema initialized');
     } catch (err) {
       console.error('Failed to initialize PostgreSQL schema:', err);

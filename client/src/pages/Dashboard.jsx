@@ -1,89 +1,75 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getReservedEvents, getUpcomingEvents, getGroups } from '../services/api';
-import EventCard from '../components/EventCard';
-import EventModal from '../components/EventModal';
+import { getActivePulse } from '../services/api';
+import ActivePulseCard from '../components/ActivePulseCard';
+import StartPulseCard from '../components/StartPulseCard';
+import AwayBanner from '../components/AwayBanner';
 import './Dashboard.css';
 
 export default function Dashboard() {
   const { user, groups: userGroups } = useAuth();
-  const [reservedEvents, setReservedEvents] = useState([]);
-  const [upcomingEvents, setUpcomingEvents] = useState([]);
-  const [allGroups, setAllGroups] = useState([]);
+  const [activeGroupId, setActiveGroupId] = useState(null);
+  const [pulse, setPulse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState(null);
-
-  const isAdmin = user?.role === 'admin';
-  const groups = isAdmin ? allGroups : userGroups;
 
   useEffect(() => {
-    // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
       return;
     }
-
     const handler = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
       setShowInstallBanner(true);
     };
-
     window.addEventListener('beforeinstallprompt', handler);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-    };
+    return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
+  // Pick the active group: user.default_group_id, else first group
   useEffect(() => {
-    loadData();
-  }, [isAdmin]);
+    if (activeGroupId) return;
+    if (user?.default_group_id) {
+      setActiveGroupId(user.default_group_id);
+    } else if (userGroups && userGroups.length > 0) {
+      setActiveGroupId(userGroups[0].id);
+    }
+  }, [user, userGroups, activeGroupId]);
 
-  const loadData = async () => {
+  const refresh = useCallback(async () => {
+    if (!activeGroupId) {
+      setLoading(false);
+      return;
+    }
     try {
-      const promises = [getReservedEvents(), getUpcomingEvents()];
-      if (isAdmin) {
-        promises.push(getGroups());
-      }
-      const results = await Promise.all(promises);
-      setReservedEvents(results[0].data);
-      setUpcomingEvents(results[1].data);
-      if (isAdmin && results[2]) {
-        setAllGroups(results[2].data);
-      }
-    } catch (error) {
-      console.error('Failed to load data:', error);
+      const res = await getActivePulse(activeGroupId);
+      setPulse(res.data.pulse);
+    } catch (err) {
+      console.error('Failed to load active pulse:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeGroupId]);
 
-  const loadEvents = async () => {
-    try {
-      const [reservedRes, upcomingRes] = await Promise.all([
-        getReservedEvents(),
-        getUpcomingEvents()
-      ]);
-      setReservedEvents(reservedRes.data);
-      setUpcomingEvents(upcomingRes.data);
-    } catch (error) {
-      console.error('Failed to load events:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  // Poll for changes while we're on this page
+  useEffect(() => {
+    if (!activeGroupId) return;
+    const id = setInterval(refresh, 15000);
+    return () => clearInterval(id);
+  }, [activeGroupId, refresh]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
-
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-
     if (outcome === 'accepted') {
       setShowInstallBanner(false);
       setIsInstalled(true);
@@ -91,16 +77,17 @@ export default function Dashboard() {
     setDeferredPrompt(null);
   };
 
-  if (loading) {
-    return <div className="loading">Loading...</div>;
-  }
+  const isPending = user?.role === 'pending';
+  const hasGroups = userGroups && userGroups.length > 0;
+
+  if (loading) return <div className="loading">Loading...</div>;
 
   return (
     <div className="dashboard">
       <div className="dashboard-header">
         <div className="page-header">
-          <h1>Welcome, {user?.name}!</h1>
-          <p>Manage your pickleball games and reservations</p>
+          <h1>Hi, {user?.name?.split(' ')[0] || user?.name}</h1>
+          <p>Tap a button. Get to the courts.</p>
         </div>
         <Link to="/profile" className="profile-button">
           <span className="profile-avatar-small">{user?.name?.charAt(0).toUpperCase()}</span>
@@ -108,7 +95,6 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* Install App Banner */}
       {showInstallBanner && !isInstalled && (
         <div className="install-banner">
           <div className="install-banner-content">
@@ -119,132 +105,62 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="install-banner-actions">
-            <button className="btn btn-outline btn-sm" onClick={() => setShowInstallBanner(false)}>
-              Maybe Later
-            </button>
-            <button className="btn btn-primary" onClick={handleInstall}>
-              Install App
-            </button>
+            <button className="btn btn-outline btn-sm" onClick={() => setShowInstallBanner(false)}>Maybe Later</button>
+            <button className="btn btn-primary" onClick={handleInstall}>Install App</button>
           </div>
         </div>
       )}
 
-      {/* Your Reservations */}
-      <section className="dashboard-section">
-        <h2>Your Reservations ({reservedEvents.length})</h2>
-        {reservedEvents.length === 0 ? (
-          <div className="card">
-            <p className="text-muted">
-              You haven't reserved any upcoming events.
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* First reservation as full card */}
-            <EventCard
-              event={reservedEvents[0]}
-              onReservationChange={loadData}
-            />
-            {/* Remaining reservations compact */}
-            {reservedEvents.length > 1 && (
-              <div className="upcoming-events-compact mt-1">
-                {reservedEvents.slice(1).map((event) => {
-                  const [y, m, d] = event.event_date.split('T')[0].split('-');
-                  const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-                  const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                  const [hours, minutes] = event.start_time.split(':');
-                  const hour = parseInt(hours);
-                  const timeStr = `${hour % 12 || 12}:${minutes} ${hour >= 12 ? 'PM' : 'AM'}`;
-                  return (
-                    <div key={event.id} className="upcoming-event-row reserved" onClick={() => setSelectedEventId(event.id)}>
-                      <span className="upcoming-date">{dateStr}</span>
-                      <span className="upcoming-title">{event.title}</span>
-                      <span className="upcoming-time">{timeStr}</span>
-                      <span className="upcoming-group">{event.group_name}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-      </section>
-
-      {/* Upcoming Events - Compact */}
-      <section className="dashboard-section">
-        <div className="section-header-inline">
-          <h2>Upcoming Events</h2>
-          <Link to="/calendar" className="view-all-link">View All &rarr;</Link>
+      {isPending && (
+        <div className="card">
+          <p className="text-muted">Your account is awaiting admin approval.</p>
         </div>
-        {(() => {
-          const now = new Date();
-          const filteredEvents = upcomingEvents.filter((event) => {
-            const [y, m, d] = event.event_date.split('T')[0].split('-');
-            const [hours, minutes] = event.start_time.split(':');
-            const eventDateTime = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), parseInt(hours), parseInt(minutes));
-            return eventDateTime > now;
-          });
-          return filteredEvents.length === 0 ? (
-            <p className="text-muted">No upcoming events in your groups.</p>
+      )}
+
+      {!isPending && !hasGroups && (
+        <div className="card">
+          <p className="text-muted">You're not in any groups yet. <Link to="/groups/browse">Browse groups</Link> to join.</p>
+        </div>
+      )}
+
+      {!isPending && hasGroups && (
+        <>
+          {userGroups.length > 1 && (
+            <div className="group-selector-row">
+              <label htmlFor="pulse-group-select">Group:</label>
+              <select
+                id="pulse-group-select"
+                value={activeGroupId || ''}
+                onChange={(e) => setActiveGroupId(parseInt(e.target.value, 10))}
+              >
+                {userGroups.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {pulse ? (
+            <ActivePulseCard
+              pulse={pulse}
+              onUpdate={(updated) => {
+                if (updated) setPulse(updated);
+                else refresh();
+              }}
+            />
           ) : (
-            <div className="upcoming-events-compact">
-              {filteredEvents.slice(0, 3).map((event) => {
-              const [y, m, d] = event.event_date.split('T')[0].split('-');
-              const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-              const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-              const [hours, minutes] = event.start_time.split(':');
-              const hour = parseInt(hours);
-              const timeStr = `${hour % 12 || 12}:${minutes} ${hour >= 12 ? 'PM' : 'AM'}`;
-              return (
-                <div key={event.id} className={`upcoming-event-row ${event.is_reserved ? 'reserved' : ''}`} onClick={() => setSelectedEventId(event.id)}>
-                  <span className="upcoming-date">{dateStr}</span>
-                  <span className="upcoming-title">{event.title}</span>
-                  <span className="upcoming-time">{timeStr}</span>
-                  <span className="upcoming-group">{event.group_name}</span>
-                  {event.is_reserved && <span className="upcoming-reserved-badge">Reserved</span>}
-                </div>
-              );
-            })}
-          </div>
-          );
-        })()}
-      </section>
+            <StartPulseCard
+              groupId={activeGroupId}
+              onCreated={(newPulse) => setPulse(newPulse)}
+            />
+          )}
 
-      {/* Your Groups */}
-      <section className="dashboard-section">
-        <h2>Your Groups</h2>
-        {groups.length === 0 ? (
-          <div className="card">
-            <p className="text-muted">
-              {isAdmin
-                ? 'No groups exist yet. Create groups in the Admin panel.'
-                : "You're not in any groups yet. Please wait for an admin to assign you."}
-            </p>
-            {isAdmin && (
-              <Link to="/admin/groups" className="btn btn-primary mt-1">
-                Create Groups
-              </Link>
-            )}
-          </div>
-        ) : (
-          <div className="groups-grid">
-            {groups.map((group) => (
-              <Link key={group.id} to={`/groups/${group.id}/events`} className="group-card">
-                <h3>{group.name}</h3>
-                {group.description && <p>{group.description}</p>}
-                <span className="group-link">View Events &rarr;</span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+          <AwayBanner />
 
-      {selectedEventId && (
-        <EventModal
-          eventId={selectedEventId}
-          onClose={() => setSelectedEventId(null)}
-          onReservationChange={loadData}
-        />
+          <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.875rem' }}>
+            <Link to="/schedule" className="view-all-link">Schedule a formal event &rarr;</Link>
+          </div>
+        </>
       )}
     </div>
   );

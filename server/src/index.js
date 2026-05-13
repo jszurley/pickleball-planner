@@ -13,6 +13,8 @@ const groupsRoutes = require('./routes/groups');
 const locationsRoutes = require('./routes/locations');
 const eventsRoutes = require('./routes/events');
 const reservationsRoutes = require('./routes/reservations');
+const pulsesRoutes = require('./routes/pulses');
+const Pulse = require('./models/Pulse');
 
 const app = express();
 
@@ -85,6 +87,19 @@ app.use('/api/groups', groupsRoutes);
 app.use('/api/locations', locationsRoutes);
 app.use('/api', eventsRoutes);
 app.use('/api', reservationsRoutes);
+app.use('/api/pulses', pulsesRoutes);
+
+// Expose VAPID public key to the frontend
+app.get('/api/push/public-key', (req, res) => {
+  res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || null });
+});
+
+// Background: auto-archive expired pulses every 5 minutes
+setInterval(() => {
+  Pulse.archiveExpired()
+    .then(n => { if (n) console.log(`Archived ${n} expired pulse(s)`); })
+    .catch(err => console.error('archiveExpired error:', err.message));
+}, 5 * 60 * 1000);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

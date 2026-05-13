@@ -1,7 +1,18 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { getMe } from '../services/api';
+import { ensurePushSubscription } from '../services/push';
 
 const AuthContext = createContext(null);
+
+// If the user has Notification.permission==='granted' already, silently
+// re-sync the subscription on every load. Only prompt fresh after an
+// explicit login.
+function syncPush({ promptIfDefault }) {
+  // Defer briefly so we don't compete with first paint
+  setTimeout(() => {
+    ensurePushSubscription({ promptIfDefault }).catch(() => {});
+  }, 1500);
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -22,6 +33,10 @@ export function AuthProvider({ children }) {
       const response = await getMe();
       setUser(response.data.user);
       setGroups(response.data.groups);
+      // If permission is already granted, refresh subscription quietly.
+      if (response.data.user && response.data.user.role !== 'pending') {
+        syncPush({ promptIfDefault: false });
+      }
     } catch (error) {
       console.error('Failed to load user:', error);
       localStorage.removeItem('token');
@@ -36,6 +51,10 @@ export function AuthProvider({ children }) {
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
     loadUser(); // Load full user data with groups
+    // Prompt for push notifications on fresh login (only if not yet decided)
+    if (userData && userData.role !== 'pending') {
+      syncPush({ promptIfDefault: true });
+    }
   };
 
   const logout = () => {

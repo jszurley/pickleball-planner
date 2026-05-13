@@ -86,4 +86,19 @@ export const updateGuestCount = (eventId, guestCount) => api.put(`/events/${even
 export const cancelReservation = (eventId) => api.delete(`/events/${eventId}/reserve`);
 export const getEventReservations = (eventId) => api.get(`/events/${eventId}/reservations`);
 
+// Pulses
+export const getActivePulse = (groupId) =>
+  api.get('/pulses/active', { params: groupId ? { groupId } : {} });
+export const createPulse = (data) => api.post('/pulses', data);
+export const respondToPulse = (id, status) => api.post(`/pulses/${id}/respond`, { status });
+export const closePulse = (id) => api.patch(`/pulses/${id}/close`);
+
+// User preferences / away mode / push subscription
+export const updatePreferences = (data) => api.put('/users/me/preferences', data);
+export const setAway = (startDate, endDate) => api.put('/users/me/away', { startDate, endDate });
+export const clearAway = () => api.delete('/users/me/away');
+export const savePushSubscription = (sub) => api.put('/users/me/push-subscription', sub);
+export const clearPushSubscription = () => api.delete('/users/me/push-subscription');
+export const getPushPublicKey = () => api.get('/push/public-key');
+
 export default api;

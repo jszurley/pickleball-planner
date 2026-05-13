@@ -221,7 +221,15 @@ router.get('/me', authAllowPending, async (req, res) => {
         role: user.role,
         level_of_play: user.level_of_play || '',
         dupr_rating: user.dupr_rating || null,
-        certified_rating: !!user.certified_rating
+        certified_rating: !!user.certified_rating,
+        default_group_id: user.default_group_id || null,
+        default_location_id: user.default_location_id || null,
+        usual_morning_start: user.usual_morning_start || '08:00',
+        usual_evening_start: user.usual_evening_start || '18:00',
+        usual_duration_min: user.usual_duration_min || 90,
+        away_start_date: user.away_start_date || null,
+        away_end_date: user.away_end_date || null,
+        has_push_subscription: !!user.has_push_subscription
       },
       groups
     });

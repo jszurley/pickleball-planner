@@ -1,11 +1,94 @@
 const express = require('express');
 const User = require('../models/User');
 const GroupRequest = require('../models/GroupRequest');
+const PulseResponse = require('../models/PulseResponse');
 const auth = require('../middleware/auth');
 const adminOnly = require('../middleware/adminOnly');
 const notifications = require('../services/notificationService');
 
 const router = express.Router();
+
+// IMPORTANT: /me/* routes are declared before /:id routes so they aren't shadowed.
+
+// Update the caller's pickleball preferences
+router.put('/me/preferences', auth, async (req, res) => {
+  try {
+    const { default_group_id, default_location_id, usual_morning_start, usual_evening_start, usual_duration_min } = req.body;
+    // If they set a default group, verify membership
+    if (default_group_id) {
+      const inGroup = await User.isInGroup(req.user.id, default_group_id);
+      if (!inGroup) return res.status(400).json({ error: 'Not a member of that group' });
+    }
+    const updated = await User.updatePreferences(req.user.id, {
+      default_group_id, default_location_id, usual_morning_start, usual_evening_start, usual_duration_min
+    });
+    res.json({
+      default_group_id: updated.default_group_id,
+      default_location_id: updated.default_location_id,
+      usual_morning_start: updated.usual_morning_start,
+      usual_evening_start: updated.usual_evening_start,
+      usual_duration_min: updated.usual_duration_min
+    });
+  } catch (error) {
+    console.error('Update preferences error:', error);
+    res.status(500).json({ error: 'Failed to update preferences' });
+  }
+});
+
+// Set away mode (date range)
+router.put('/me/away', auth, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.body;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate and endDate are required' });
+    }
+    if (new Date(endDate) < new Date(startDate)) {
+      return res.status(400).json({ error: 'endDate must be on or after startDate' });
+    }
+    const result = await User.setAway(req.user.id, startDate, endDate);
+    // Flip any active-pulse responses to "out" with source=auto_away
+    await PulseResponse.autoMarkOutForUser(req.user.id).catch(() => {});
+    res.json(result);
+  } catch (error) {
+    console.error('Set away error:', error);
+    res.status(500).json({ error: 'Failed to set away' });
+  }
+});
+
+router.delete('/me/away', auth, async (req, res) => {
+  try {
+    await User.clearAway(req.user.id);
+    // Remove auto_away rows so the user can re-respond on any active pulses
+    await PulseResponse.removeAutoAwayForUser(req.user.id).catch(() => {});
+    res.json({ away_start_date: null, away_end_date: null });
+  } catch (error) {
+    console.error('Clear away error:', error);
+    res.status(500).json({ error: 'Failed to clear away' });
+  }
+});
+
+// Store a Web Push subscription (PushSubscription JSON)
+router.put('/me/push-subscription', auth, async (req, res) => {
+  try {
+    const sub = req.body && req.body.endpoint ? req.body : null;
+    if (!sub) return res.status(400).json({ error: 'Invalid subscription' });
+    await User.setPushSubscription(req.user.id, sub);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Save push subscription error:', error);
+    res.status(500).json({ error: 'Failed to save subscription' });
+  }
+});
+
+router.delete('/me/push-subscription', auth, async (req, res) => {
+  try {
+    await User.setPushSubscription(req.user.id, null);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Clear push subscription error:', error);
+    res.status(500).json({ error: 'Failed to clear subscription' });
+  }
+});
 
 // Get pending registration requests (admin only)
 router.get('/pending', auth, adminOnly, async (req, res) => {

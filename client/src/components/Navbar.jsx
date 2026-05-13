@@ -25,7 +25,8 @@ export default function Navbar() {
                 <Link to="/groups/browse">Browse Groups</Link>
               ) : (
                 <>
-                  <Link to="/">Dashboard</Link>
+                  <Link to="/">Home</Link>
+                  <Link to="/schedule">Schedule</Link>
                   <Link to="/calendar">Calendar</Link>
                   <Link to="/groups/browse">Groups</Link>
                   {isAdmin && <Link to="/admin">Admin</Link>}

@@ -22,6 +22,10 @@ async function initDB() {
   if (fs.existsSync(DB_PATH)) {
     const buffer = fs.readFileSync(DB_PATH);
     db = new SQL.Database(buffer);
+    // Always run schema init — it's idempotent (CREATE TABLE IF NOT EXISTS +
+    // ALTER TABLE ... wrapped in try/catch) and lets new tables/columns land
+    // on an existing local DB file without manual migration.
+    initSchema();
   } else {
     db = new SQL.Database();
     initSchema();
@@ -171,6 +175,50 @@ function initSchema() {
   db.run('CREATE INDEX IF NOT EXISTS idx_group_locations_location_id ON group_locations(location_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_group_requests_user_id ON group_requests(user_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_group_requests_group_id ON group_requests(group_id)');
+
+  // --- Pulse feature (SQLite-compatible subset) ---
+  // Column-additions are wrapped in try/catch because ADD COLUMN errors when the column already exists.
+  const addCol = (sql) => { try { db.run(sql); } catch (_) {} };
+  addCol("ALTER TABLE users ADD COLUMN default_group_id INTEGER");
+  addCol("ALTER TABLE users ADD COLUMN default_location_id INTEGER");
+  addCol("ALTER TABLE users ADD COLUMN usual_morning_start TEXT DEFAULT '08:00'");
+  addCol("ALTER TABLE users ADD COLUMN usual_evening_start TEXT DEFAULT '18:00'");
+  addCol("ALTER TABLE users ADD COLUMN usual_duration_min INTEGER DEFAULT 90");
+  addCol("ALTER TABLE users ADD COLUMN away_start_date TEXT");
+  addCol("ALTER TABLE users ADD COLUMN away_end_date TEXT");
+  addCol("ALTER TABLE users ADD COLUMN push_subscription TEXT");
+  addCol("ALTER TABLE groups ADD COLUMN min_players INTEGER DEFAULT 4");
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pulses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+      pulse_date TEXT NOT NULL,
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now')),
+      archived_at TEXT
+    )
+  `);
+  try { db.run("CREATE UNIQUE INDEX IF NOT EXISTS one_active_pulse_per_group ON pulses (group_id) WHERE status = 'active'"); } catch (_) {}
+  db.run('CREATE INDEX IF NOT EXISTS idx_pulses_group_status ON pulses (group_id, status)');
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pulse_responses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pulse_id INTEGER NOT NULL REFERENCES pulses(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      status TEXT NOT NULL,
+      source TEXT NOT NULL DEFAULT 'manual',
+      responded_at TEXT DEFAULT (datetime('now')),
+      UNIQUE (pulse_id, user_id)
+    )
+  `);
+  db.run('CREATE INDEX IF NOT EXISTS idx_pulse_responses_pulse ON pulse_responses (pulse_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_pulse_responses_user ON pulse_responses (user_id)');
 
   saveDB();
 }

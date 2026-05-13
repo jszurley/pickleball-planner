@@ -26,10 +26,55 @@ const User = {
 
   async findById(id) {
     const result = await pool.query(
-      'SELECT id, email, name, phone, role, level_of_play, dupr_rating, certified_rating, created_at, updated_at FROM users WHERE id = $1',
+      `SELECT id, email, name, phone, role, level_of_play, dupr_rating, certified_rating,
+              default_group_id, default_location_id,
+              usual_morning_start, usual_evening_start, usual_duration_min,
+              away_start_date, away_end_date,
+              (push_subscription IS NOT NULL) AS has_push_subscription,
+              created_at, updated_at
+       FROM users WHERE id = $1`,
       [id]
     );
     return result.rows[0];
+  },
+
+  async updatePreferences(id, { default_group_id, default_location_id, usual_morning_start, usual_evening_start, usual_duration_min }) {
+    const result = await pool.query(
+      `UPDATE users
+       SET default_group_id = $1,
+           default_location_id = $2,
+           usual_morning_start = COALESCE($3, usual_morning_start),
+           usual_evening_start = COALESCE($4, usual_evening_start),
+           usual_duration_min = COALESCE($5, usual_duration_min),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $6
+       RETURNING *`,
+      [default_group_id || null, default_location_id || null, usual_morning_start || null, usual_evening_start || null, usual_duration_min || null, id]
+    );
+    return result.rows[0];
+  },
+
+  async setAway(id, startDate, endDate) {
+    const result = await pool.query(
+      `UPDATE users SET away_start_date = $1, away_end_date = $2, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3 RETURNING away_start_date, away_end_date`,
+      [startDate, endDate, id]
+    );
+    return result.rows[0];
+  },
+
+  async clearAway(id) {
+    await pool.query(
+      `UPDATE users SET away_start_date = NULL, away_end_date = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+      [id]
+    );
+  },
+
+  async setPushSubscription(id, subscription) {
+    await pool.query(
+      `UPDATE users SET push_subscription = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      [subscription ? JSON.stringify(subscription) : null, id]
+    );
   },
 
   async updateProfile(id, { name, email, phone, level_of_play, dupr_rating, certified_rating }) {
